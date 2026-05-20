@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banana Villas Watamu | Your Vacation Starts Here</title>
+    <meta name="description" content="Experience luxury and nature at Banana Villas Watamu. A premium villa with a stunning oasis-style swimming pool and modern architecture.">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Banana Villas Watamu | Your Vacation Starts Here">
+    <meta property="og:description" content="Escape to your private paradise in Watamu, Kenya. A luxury 3-bedroom villa with oasis pool, beach access, and stunning tropical surroundings.">
+    <meta property="og:image" content="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(1).jpg">
+    <meta property="og:url" content="https://www.bananavillaswatamu.com">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Favicon -->
+    <link rel="icon" href="images/banana-villas-watamu-logo.png" type="image/png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo"><img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo" style="height: 40px; display: block;"></a>
+            <nav class="nav-links">
+                <a href="#about">About</a>
+                <a href="#spaces">Spaces</a>
+                <a href="#amenities">Amenities</a>
+                <a href="#gallery">Gallery</a>
+                <a href="#contact" class="btn-primary nav-btn">Book Now</a>
+            </nav>
+            <button class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="hero" class="hero">
+            <div class="hero-content fade-up">
+                <h1>Banana Villas Watamu</h1>
+                <p class="tagline">Your Vacation Starts Here</p>
+                <p class="hero-desc">Escape to your private paradise overlooking a beautiful oasis-style swimming pool and lush tropical nature.</p>
+                <div class="hero-specs">
+                    <span class="spec-pill">🛏️ 3 Bedrooms</span>
+                    <span class="spec-pill">🛁 2 Bathrooms</span>
+                    <span class="spec-pill">🏊‍♂️ Swimming Pool</span>
+                    <span class="spec-pill">❄️ Air Con</span>
+                    <span class="spec-pill">🏖️ Beach Access</span>
+                </div>
+                
+                <div class="booking-strip glass-card fade-up">
+                    <div class="strip-item">
+                        <label for="checkin">Check-in</label>
+                        <input type="date" id="checkin">
+                    </div>
+                    <div class="strip-item">
+                        <label for="checkout">Check-out</label>
+                        <input type="date" id="checkout">
+                    </div>
+                    <div class="strip-item">
+                        <label for="adults">Adults</label>
+                        <input type="number" id="adults" min="1" max="8" value="2">
+                    </div>
+                    <div class="strip-item">
+                        <label for="kids">Kids</label>
+                        <input type="number" id="kids" min="0" max="7" value="0">
+                    </div>
+                    <button class="btn-primary strip-btn" id="checkAvailabilityBtn">Check Availability</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section about">
+            <div class="container">
+                <div class="about-grid">
+                    <div class="about-text fade-right">
+                        <h2>About The Villa</h2>
+                        <p>Welcome to Banana Villas Watamu, where modern architecture meets tropical tranquility. Nestled in a lush environment, our villa offers an unparalleled luxury experience with a stunning oasis-style swimming pool and expansive living areas.</p>
+                        <p>Designed for ultimate relaxation, every corner of the villa is crafted to blur the lines between indoor comfort and outdoor natural beauty.</p>
+                        <div class="stats">
+                            <div class="stat-item">
+                                <span class="stat-number">3</span>
+                                <span class="stat-label">Bedrooms</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">2</span>
+                                <span class="stat-label">Bathrooms</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">1</span>
+                                <span class="stat-label">Private Pool</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">10</span>
+                                <span class="stat-label">Mins to Beach</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="about-image fade-left glass-card p-0">
+                        <!-- We will use a placeholder that the user can replace with their uploaded images -->
+                        <img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(78).jpg" alt="Villa Exterior" class="img-fluid rounded">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Spaces Section -->
+        <section id="spaces" class="section bg-light">
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>Our Spaces</h2>
+                    <p>Luxurious spaces designed for your absolute comfort.</p>
+                </div>
+                <div class="cards-grid">
+                    <div class="glass-card room-card fade-up">
+                        <img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(80).jpg" alt="Swimming Pool" class="card-img">
+                        <div class="card-content">
+                            <h3>Swimming Pool</h3>
+                            <p>A refreshing tropical oasis perfect for cooling off, soaking up the sun, and making lasting memories.</p>
+                        </div>
+                    </div>
+                    <div class="glass-card room-card fade-up" style="transition-delay: 0.1s;">
+                        <img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(62).jpg" alt="Bedrooms" class="card-img">
+                        <div class="card-content">
+                            <h3>Bedrooms</h3>
+                            <p>Three air-conditioned rooms including a master en-suite, plus comfortable queen and double guest rooms.</p>
+                        </div>
+                    </div>
+                    <div class="glass-card room-card fade-up" style="transition-delay: 0.2s;">
+                        <img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(16).jpg" alt="Fully Equipped Kitchen" class="card-img">
+                        <div class="card-content">
+                            <h3>Fully Equipped Kitchen</h3>
+                            <p>A modern culinary space, perfect for cooking delicious meals or hosting a private chef.</p>
+                        </div>
+                    </div>
+                    <div class="glass-card room-card fade-up" style="transition-delay: 0.3s;">
+                        <img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(46).jpg" alt="Living Room" class="card-img">
+                        <div class="card-content">
+                            <h3>Living Room</h3>
+                            <p>A spacious, open-concept area featuring a cozy sofa bed and TV for ultimate relaxation.</p>
+                        </div>
+                    </div>
+                    <div class="glass-card room-card fade-up" style="transition-delay: 0.4s;">
+                        <img src="images/banana%20villas%20watanu%20swing.jpg" alt="Garden with Swing" class="card-img">
+                        <div class="card-content">
+                            <h3>Garden with Swing</h3>
+                            <p>A peaceful outdoor sanctuary where you can gently sway and relax in lush surroundings.</p>
+                        </div>
+                    </div>
+                    <div class="glass-card room-card fade-up" style="transition-delay: 0.5s;">
+                        <img src="images/banana%20villas%20watanu%20beach.jpg" alt="Beach Access" class="card-img">
+                        <div class="card-content">
+                            <h3>Beach Access</h3>
+                            <p>Just a short, scenic walk to pristine sandy shores, perfect for sunbathing and morning strolls.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Amenities Section -->
+        <section id="amenities" class="section">
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>Premium Amenities</h2>
+                    <p>Everything you need for a perfect stay.</p>
+                </div>
+                <div class="amenities-grid">
+                    <div class="glass-card amenity-item fade-up">
+                        <div class="amenity-icon"><i data-lucide="waves"></i></div>
+                        <h3>Oasis Pool</h3>
+                        <p>A stunning outdoor pool surrounded by tropical gardens.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.1s;">
+                        <div class="amenity-icon"><i data-lucide="wifi"></i></div>
+                        <h3>High-Speed WiFi</h3>
+                        <p>Stay connected with fast and reliable internet access.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.2s;">
+                        <div class="amenity-icon"><i data-lucide="snowflake"></i></div>
+                        <h3>Air Conditioning</h3>
+                        <p>Climate-controlled rooms for your ultimate comfort.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.3s;">
+                        <div class="amenity-icon"><i data-lucide="utensils-crossed"></i></div>
+                        <h3>Fully Equipped Kitchen</h3>
+                        <p>Modern appliances ready for your culinary adventures.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.4s;">
+                        <div class="amenity-icon"><i data-lucide="zap"></i></div>
+                        <h3>Back Up Generator</h3>
+                        <p>Uninterrupted power supply for your peace of mind.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.5s;">
+                        <div class="amenity-icon"><i data-lucide="car-front"></i></div>
+                        <h3>Secure Parking</h3>
+                        <p>On-site secure parking for your vehicles.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.6s;">
+                        <div class="amenity-icon"><i data-lucide="baby"></i></div>
+                        <h3>Crib</h3>
+                        <p>Available upon request for our little guests.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.7s;">
+                        <div class="amenity-icon"><i data-lucide="flame"></i></div>
+                        <h3>BBQ Grill</h3>
+                        <p>Perfect for an outdoor barbecue with friends and family.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.8s;">
+                        <div class="amenity-icon"><i data-lucide="palmtree"></i></div>
+                        <h3>Beach Access</h3>
+                        <p>Just a 10 minutes walk to the beautiful sandy beach.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 0.9s;">
+                        <div class="amenity-icon"><i data-lucide="chef-hat"></i></div>
+                        <h3>Chef Available</h3>
+                        <p>Private chef available on request for personalized dining.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 1.0s;">
+                        <div class="amenity-icon"><i data-lucide="map"></i></div>
+                        <h3>Local Tour Guide</h3>
+                        <p>Available on request to help you explore Watamu.</p>
+                    </div>
+                    <div class="glass-card amenity-item fade-up" style="transition-delay: 1.1s;">
+                        <div class="amenity-icon"><i data-lucide="rocking-chair"></i></div>
+                        <h3>Outdoor Swing</h3>
+                        <p>Relax and unwind in our beautiful outdoor swing.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Gallery Section -->
+        <section id="gallery" class="section bg-light">
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>Gallery</h2>
+                    <p>Take a glimpse into the beauty of Banana Villas.</p>
+                </div>
+                <div class="bento-grid">
+                    <div class="gallery-item fade-up bento-large"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(1).jpg" loading="lazy" alt="Banana Villas Watamu exterior view"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(16).jpg" loading="lazy" alt="Fully equipped kitchen at Banana Villas"></div>
+                    <div class="gallery-item fade-up bento-wide"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(18).jpg" loading="lazy" alt="Spacious living area with tropical views"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(2).jpg" loading="lazy" alt="Villa outdoor area and gardens"></div>
+                    <div class="gallery-item fade-up bento-tall"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(3).jpg" loading="lazy" alt="Tropical garden surroundings"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(44).jpg" loading="lazy" alt="Master bedroom at Banana Villas"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(46).jpg" loading="lazy" alt="Comfortable living room seating area"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(47).jpg" loading="lazy" alt="Villa dining and entertainment space"></div>
+                    <div class="gallery-item fade-up bento-wide"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(62).jpg" loading="lazy" alt="Air-conditioned guest bedroom"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(64).jpg" loading="lazy" alt="Villa bathroom and amenities"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(66).jpg" loading="lazy" alt="Outdoor terrace and relaxation area"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(67).jpg" loading="lazy" alt="Lush tropical landscape at Banana Villas"></div>
+                    <div class="gallery-item fade-up bento-large"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(7).jpg" loading="lazy" alt="Oasis-style swimming pool at sunset"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(71).jpg" loading="lazy" alt="Pool area with sun loungers"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(73).jpg" loading="lazy" alt="Scenic view from Banana Villas Watamu"></div>
+                    <div class="gallery-item fade-up bento-wide"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(76).jpg" loading="lazy" alt="Villa architecture and design details"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(78).jpg" loading="lazy" alt="Banana Villas Watamu front view"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(80).jpg" loading="lazy" alt="Sparkling swimming pool area"></div>
+                    <div class="gallery-item fade-up bento-tall"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(82).jpg" loading="lazy" alt="Tropical garden and outdoor space"></div>
+                    <div class="gallery-item fade-up"><img src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(9).jpg" loading="lazy" alt="Interior living space at Banana Villas"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="section">
+            <div class="container">
+                <div class="contact-wrapper glass-card fade-up">
+                    <div class="contact-info">
+                        <h2>Get In Touch</h2>
+                        <p>Ready to book your stay or have some questions? We'd love to hear from you.</p>
+                        <div class="contact-details">
+                            <div class="contact-detail">
+                                <span class="icon">📍</span>
+                                <span>Watamu, Kenya</span>
+                            </div>
+                            <div class="contact-detail">
+                                <span class="icon">📞</span>
+                                <a href="tel:+254715257111">+254 715 257 111</a>
+                            </div>
+                            <div class="contact-detail">
+                                <span class="icon">💬</span>
+                                <a href="https://wa.me/254715257111" target="_blank">+254 715 257 111 (WhatsApp)</a>
+                            </div>
+                            <div class="contact-detail">
+                                <span class="icon">📧</span>
+                                <a href="mailto:contact@bananavillaswatamu.com">contact@bananavillaswatamu.com</a>
+                            </div>
+                        </div>
+                    </div>
+                    <form class="contact-form" onsubmit="event.preventDefault();">
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input type="text" id="name" name="name" required placeholder="Your Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" id="email" name="email" required placeholder="Your Email">
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Message</label>
+                            <textarea id="message" name="message" rows="4" required placeholder="How can we help you?"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="btnContactFormWhatsapp" class="btn-primary btn-whatsapp btn-full">Send via WhatsApp</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox">
+        <span class="lightbox-close">&times;</span>
+        <div class="lightbox-content">
+            <img id="lightbox-img" src="" alt="Full view">
+        </div>
+        <button class="lightbox-prev" aria-label="Previous image">&#10094;</button>
+        <button class="lightbox-next" aria-label="Next image">&#10095;</button>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="bookingModal" class="modal">
+        <div class="modal-content glass-card">
+            <span class="close-modal">&times;</span>
+            <h2>Complete Your Booking</h2>
+            <p>Please provide your details to request availability for your selected dates.</p>
+            <form id="modalBookingForm" onsubmit="event.preventDefault();">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="modalCheckin">Check-in</label>
+                        <input type="date" id="modalCheckin" name="checkin" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalCheckout">Check-out</label>
+                        <input type="date" id="modalCheckout" name="checkout" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="modalAdults">Adults</label>
+                        <input type="number" id="modalAdults" name="adults" min="1" max="8" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="modalKids">Kids</label>
+                        <input type="number" id="modalKids" name="kids" min="0" max="7" required>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="modalName">Name</label>
+                    <input type="text" id="modalName" name="name" required placeholder="Your Name">
+                </div>
+                <div class="form-group">
+                    <label for="modalEmail">Email</label>
+                    <input type="email" id="modalEmail" name="email" required placeholder="Your Email">
+                </div>
+                <div class="form-group">
+                    <label for="modalPhone">Phone Number</label>
+                    <input type="tel" id="modalPhone" name="phone" required placeholder="Your Phone Number">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="btnWhatsapp" class="btn-primary btn-whatsapp btn-full">Request via WhatsApp</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo" style="height: 50px; margin-bottom: 0.5rem; background-color: rgba(255,255,255,0.9); padding: 5px; border-radius: 4px;">
+                    <p>Your Vacation Starts Here</p>
+                </div>
+                <div class="footer-links">
+                    <a href="#about">About</a>
+                    <a href="#spaces">Spaces</a>
+                    <a href="#amenities">Amenities</a>
+                    <a href="#gallery">Gallery</a>
+                    <a href="#contact">Contact</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Banana Villas Watamu. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="script.js"></script>
+</body>
+</html>
