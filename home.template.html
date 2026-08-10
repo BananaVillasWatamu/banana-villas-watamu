@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{SEO_TITLE}}</title>
+    <meta name="description" content="{{SEO_DESCRIPTION}}">
+    <meta name="robots" content="index, follow">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="{{OG_TITLE}}">
+    <meta property="og:description" content="{{OG_DESCRIPTION}}">
+    <meta property="og:image" content="{{OG_IMAGE}}">
+    <meta property="og:url" content="https://www.bananavillaswatamu.com">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Favicon -->
+    <link rel="icon" href="images/banana-villas-watamu-logo.png" type="image/png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "LodgingBusiness",
+        "name": "Banana Villas Watamu",
+        "description": "Luxury 3-bedroom villa with oasis pool, beach access, and tropical surroundings in Watamu, Kenya.",
+        "url": "https://www.bananavillaswatamu.com",
+        "telephone": "+254715257111",
+        "email": "contact@bananavillaswatamu.com",
+        "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Watamu",
+            "addressRegion": "Kilifi County",
+            "addressCountry": "KE"
+        },
+        "numberOfRooms": 3,
+        "amenityFeature": [
+            {"@type": "LocationFeatureSpecification", "name": "Swimming Pool", "value": true},
+            {"@type": "LocationFeatureSpecification", "name": "WiFi", "value": true},
+            {"@type": "LocationFeatureSpecification", "name": "Air Conditioning", "value": true},
+            {"@type": "LocationFeatureSpecification", "name": "Kitchen", "value": true},
+            {"@type": "LocationFeatureSpecification", "name": "Parking", "value": true},
+            {"@type": "LocationFeatureSpecification", "name": "BBQ", "value": true}
+        ],
+        "image": "https://www.bananavillaswatamu.com/images/Banana%20Villas%20Watamu%20Photo%20-%20%20(1).jpg",
+        "geo": {
+            "@type": "GeoCoordinates",
+            "latitude": -3.3560,
+            "longitude": 40.0167
+        }
+    }
+    </script>
+</head>
+
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="#" class="logo"><img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo"
+                    style="height: 40px; display: block;"></a>
+            <nav class="nav-links">
+                <a href="#gallery">Gallery</a>
+                <a href="#about">About</a>
+                <a href="#amenities">Amenities</a>
+                <a href="#contact" class="btn-primary nav-btn">Book Now</a>
+            </nav>
+            <button class="mobile-menu-btn" aria-label="Toggle menu">
+                <span></span>
+                <span></span>
+                <span></span>
+            </button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section id="hero" class="hero">
+            <div class="hero-content fade-up">
+                <h1>Banana Villas Watamu</h1>
+                <p class="tagline">Your Vacation Starts Here</p>
+                <p class="hero-desc">Escape to your private paradise overlooking a beautiful oasis-style swimming pool
+                    and lush tropical nature.</p>
+                <div class="hero-specs">
+                    <span class="spec-pill"><i data-lucide="bed"></i> 3 Bedrooms</span>
+                    <span class="spec-pill"><i data-lucide="bath"></i> 3 Bathrooms</span>
+                    <span class="spec-pill"><i data-lucide="waves"></i> Swimming Pool</span>
+                    <span class="spec-pill"><i data-lucide="snowflake"></i> Air Con</span>
+                    <span class="spec-pill"><i data-lucide="palmtree"></i> Beach Access</span>
+                </div>
+
+                <div class="booking-strip glass-card fade-up">
+                    <div class="strip-item">
+                        <label for="checkin">Check-in</label>
+                        <input type="date" id="checkin">
+                    </div>
+                    <div class="strip-item">
+                        <label for="checkout">Check-out</label>
+                        <input type="date" id="checkout">
+                    </div>
+                    <div class="strip-item strip-nights" id="stripNights" style="display:none;">
+                        <label>Nights</label>
+                        <span id="nightsCount">—</span>
+                    </div>
+                    <div class="strip-item">
+                        <label for="adults">Adults</label>
+                        <input type="number" id="adults" min="1" max="10" value="2">
+                    </div>
+                    <div class="strip-item">
+                        <label for="kids">Kids</label>
+                        <input type="number" id="kids" min="0" max="9" value="0">
+                    </div>
+                    <button class="btn-primary strip-btn" id="checkAvailabilityBtn">Request Availability</button>
+                </div>
+                <div id="stripAvailabilityWarning" class="availability-note" style="display:none;"></div>
+                <a href="#contact" class="btn-primary hero-cta-mobile">Request Availability</a>
+            </div>
+        </section>
+
+        <!-- Gallery Section -->
+        <section id="gallery" class="section bg-light">
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>Gallery</h2>
+                    <p>Take a glimpse into the beauty of Banana Villas.</p>
+                </div>
+                <div class="bento-grid" id="galleryGrid">
+                    <div class="gallery-item fade-up bento-large"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(1).jpg" loading="lazy"
+                            alt="Banana Villas Watamu exterior view"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(16).jpg" loading="lazy"
+                            alt="Fully equipped kitchen at Banana Villas"></div>
+                    <div class="gallery-item fade-up bento-wide"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(18).jpg" loading="lazy"
+                            alt="Spacious living area with tropical views"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(2).jpg" loading="lazy"
+                            alt="Villa outdoor area and gardens"></div>
+                    <div class="gallery-item fade-up bento-tall"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(3).jpg" loading="lazy"
+                            alt="Tropical garden surroundings"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(44).jpg" loading="lazy"
+                            alt="Master bedroom at Banana Villas"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(46).jpg" loading="lazy"
+                            alt="Comfortable living room seating area"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(47).jpg" loading="lazy"
+                            alt="Villa dining and entertainment space"></div>
+                    <div class="gallery-item fade-up bento-wide"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(62).jpg" loading="lazy"
+                            alt="Air-conditioned guest bedroom"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(64).jpg" loading="lazy"
+                            alt="Villa bathroom and amenities"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(66).jpg" loading="lazy"
+                            alt="Outdoor terrace and relaxation area"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(67).jpg" loading="lazy"
+                            alt="Lush tropical landscape at Banana Villas"></div>
+                    <div class="gallery-item fade-up bento-large"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(7).jpg" loading="lazy"
+                            alt="Oasis-style swimming pool at sunset"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(71).jpg" loading="lazy"
+                            alt="Pool area with sun loungers"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(73).jpg" loading="lazy"
+                            alt="Scenic view from Banana Villas Watamu"></div>
+                    <div class="gallery-item fade-up bento-wide"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(76).jpg" loading="lazy"
+                            alt="Villa architecture and design details"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(78).jpg" loading="lazy"
+                            alt="Banana Villas Watamu front view"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(80).jpg" loading="lazy"
+                            alt="Sparkling swimming pool area"></div>
+                    <div class="gallery-item fade-up bento-tall"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(82).jpg" loading="lazy"
+                            alt="Tropical garden and outdoor space"></div>
+                    <div class="gallery-item fade-up"><img
+                            src="images/Banana%20Villas%20Watamu%20Photo%20-%20%20(9).jpg" loading="lazy"
+                            alt="Interior living space at Banana Villas"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="section about">
+            <div class="container">
+                <div class="about-grid">
+                    <div class="about-text fade-up">
+                        <h2>About The Villa</h2>
+                        <p>Welcome to Banana Villas Watamu, where modern architecture meets tropical tranquility.
+                            Nestled in a lush environment, our villa offers an unparalleled luxury experience with a
+                            stunning oasis-style swimming pool and expansive living areas.</p>
+                        <p>Designed for ultimate relaxation, every corner of the villa is crafted to blur the lines
+                            between indoor comfort and outdoor natural beauty.</p>
+                        <div class="stats">
+                            <div class="stat-item">
+                                <span class="stat-number">3</span>
+                                <span class="stat-label">Bedrooms</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">3</span>
+                                <span class="stat-label">Bathrooms</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">1</span>
+                                <span class="stat-label">Private Pool</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">10</span>
+                                <span class="stat-label">Mins to Beach</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Amenities Section -->
+        <section id="amenities" class="section bg-light">
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>Premium Amenities</h2>
+                    <p>Everything you need for a perfect stay.</p>
+                </div>
+                <ul class="amenities-list fade-up">
+                    <li><i data-lucide="waves"></i><span>Oasis Pool</span></li>
+                    <li><i data-lucide="wifi"></i><span>High-Speed WiFi</span></li>
+                    <li><i data-lucide="snowflake"></i><span>Air Conditioning</span></li>
+                    <li><i data-lucide="utensils-crossed"></i><span>Fully Equipped Kitchen</span></li>
+                    <li><i data-lucide="zap"></i><span>Back Up Generator</span></li>
+                    <li><i data-lucide="car-front"></i><span>Secure Parking</span></li>
+                    <li><i data-lucide="baby"></i><span>Crib (on request)</span></li>
+                    <li><i data-lucide="flame"></i><span>BBQ Grill</span></li>
+                    <li><i data-lucide="palmtree"></i><span>Beach Access</span></li>
+                    <li><i data-lucide="chef-hat"></i><span>Chef Available</span></li>
+                    <li><i data-lucide="map"></i><span>Local Tour Guide</span></li>
+                    <li><i data-lucide="rocking-chair"></i><span>Outdoor Swing</span></li>
+                </ul>
+            </div>
+        </section>
+
+        <!-- Testimonials Section -->
+        <section id="testimonials" class="section">
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>What Our Guests Say</h2>
+                    <p>Real experiences from families and couples who've stayed with us.</p>
+                </div>
+                <div class="testimonials-grid" id="testimonialsGrid">
+                    <div class="glass-card testimonial-card fade-up">
+                        <div class="stars">★★★★★</div>
+                        <p class="testimonial-text">"Absolutely stunning villa. The pool is even more beautiful in
+                            person and the team were incredibly helpful throughout our stay. We'll definitely be back!"
+                        </p>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">SM</div>
+                            <div>
+                                <div class="author-name">Sarah M.</div>
+                                <div class="author-meta">Family of 5 · July 2024</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card testimonial-card fade-up" style="transition-delay: 0.1s;">
+                        <div class="stars">★★★★★</div>
+                        <p class="testimonial-text">"Perfect escape from the city. The villa is immaculate, the private
+                            pool is divine, and Watamu itself is a hidden gem. Highly recommend the private chef
+                            option!"</p>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">JK</div>
+                            <div>
+                                <div class="author-name">James K.</div>
+                                <div class="author-meta">Couple · December 2024</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="glass-card testimonial-card fade-up" style="transition-delay: 0.2s;">
+                        <div class="stars">★★★★★</div>
+                        <p class="testimonial-text">"We booked for a family reunion and it was perfect. Spacious rooms,
+                            amazing outdoor spaces, and the beach is just a short walk. An unforgettable experience."
+                        </p>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">AN</div>
+                            <div>
+                                <div class="author-name">Amina N.</div>
+                                <div class="author-meta">Group of 8 · August 2024</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="reviews-cta fade-up">
+                    <a href="#" target="_blank" rel="noopener" class="btn-primary">Read More Reviews</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Location Section -->
+        <section id="location" class="section bg-light">
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>Getting Here</h2>
+                    <p>Watamu is a stunning coastal gem on Kenya's Indian Ocean coastline, easy to reach from major
+                        airports.</p>
+                </div>
+                <div class="location-grid">
+                    <div class="location-info fade-right">
+                        <div class="location-detail-item">
+                            <div class="location-icon"><i data-lucide="plane"></i></div>
+                            <div>
+                                <h3>Malindi Airport (MYD)</h3>
+                                <p>Closest airport — approx. 20 min drive. Daily flights from Nairobi (Wilson &amp;
+                                    JKIA).</p>
+                            </div>
+                        </div>
+                        <div class="location-detail-item">
+                            <div class="location-icon"><i data-lucide="plane"></i></div>
+                            <div>
+                                <h3>Mombasa Airport (MBA)</h3>
+                                <p>International flights available. Approx. 1.5 – 2 hr scenic coastal drive to Watamu.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="location-detail-item">
+                            <div class="location-icon"><i data-lucide="car-front"></i></div>
+                            <div>
+                                <h3>Airport Transfer</h3>
+                                <p>We can arrange a private transfer for you. Just share your flight details when
+                                    booking.</p>
+                            </div>
+                        </div>
+                        <div class="location-detail-item">
+                            <div class="location-icon"><i data-lucide="map-pin"></i></div>
+                            <div>
+                                <h3>Local Area</h3>
+                                <p>Watamu town is 5 min away. The famous Watamu Marine National Park is 10 min by boat.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="location-map fade-left">
+                        <iframe src="https://maps.google.com/maps?q=Watamu,+Kenya&output=embed" width="100%"
+                            height="420" style="border:0;" allowfullscreen="" loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade" title="Banana Villas Watamu Location">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- FAQ Section -->
+        <section id="faq" class="section">
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>Frequently Asked Questions</h2>
+                    <p>Everything you need to know before you book.</p>
+                </div>
+                <div class="faq-list fade-up">
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">What is the minimum stay? <span
+                                class="faq-icon">+</span></button>
+                        <div class="faq-answer">
+                            <p>We require a minimum of 2 nights during low season, 3 nights during high season, and 5
+                                nights over peak periods (Christmas, New Year, and Easter).</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">How many guests can the villa accommodate?
+                            <span class="faq-icon">+</span></button>
+                        <div class="faq-answer">
+                            <p>The villa comfortably sleeps up to 8 guests across 3 bedrooms. A cot is available on
+                                request for infants. Please contact us if your group is larger.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">Is the villa pet-friendly? <span
+                                class="faq-icon">+</span></button>
+                        <div class="faq-answer">
+                            <p>We are not able to accommodate pets at this time. Please get in touch if you have any
+                                special requirements and we'll do our best to assist.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">What is the cancellation policy? <span
+                                class="faq-icon">+</span></button>
+                        <div class="faq-answer">
+                            <p>Cancellations 30+ days before check-in receive a full refund. Cancellations within 14–29
+                                days receive a 50% refund. Cancellations within 14 days are non-refundable. Contact us
+                                for special circumstances.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">Is airport transfer available? <span
+                                class="faq-icon">+</span></button>
+                        <div class="faq-answer">
+                            <p>Yes — we can arrange private transfers from Malindi (MYD) or Mombasa (MBA) airports.
+                                Provide your flight details when booking and we'll quote accordingly.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">Can I hire a private chef? <span
+                                class="faq-icon">+</span></button>
+                        <div class="faq-answer">
+                            <p>Absolutely. A private chef is available on request and can prepare local Kenyan coastal
+                                cuisine and international dishes. Mention this in your booking enquiry.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">Is there WiFi at the villa? <span
+                                class="faq-icon">+</span></button>
+                        <div class="faq-answer">
+                            <p>Yes, the villa has high-speed WiFi throughout. The backup generator ensures uninterrupted
+                                power — and internet — even during outages.</p>
+                        </div>
+                    </div>
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">What are the check-in and check-out times?
+                            <span class="faq-icon">+</span></button>
+                        <div class="faq-answer">
+                            <p>Standard check-in is from 2:00 PM and check-out by 11:00 AM. Early check-in or late
+                                check-out may be possible subject to availability — just ask in advance.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="contact" class="section">
+            <div class="container">
+                <div class="contact-wrapper glass-card fade-up">
+                    <div class="contact-info">
+                        <h2>Request Availability</h2>
+                        <p>Send us your dates and we'll confirm availability and the best rate for your stay. Have a
+                            question? Drop it in the message box.</p>
+                        <div class="contact-details">
+                            <div class="contact-detail">
+                                <span class="icon"><i data-lucide="map-pin"></i></span>
+                                <span>Watamu, Kenya</span>
+                            </div>
+                            <div class="contact-detail">
+                                <span class="icon"><i data-lucide="phone"></i></span>
+                                <a href="tel:+254715257111">+254 715 257 111</a>
+                            </div>
+                            <div class="contact-detail">
+                                <span class="icon"><i data-lucide="message-circle"></i></span>
+                                <a href="https://wa.me/254715257111" target="_blank">+254 715 257 111 (WhatsApp)</a>
+                            </div>
+                            <div class="contact-detail">
+                                <span class="icon"><i data-lucide="mail"></i></span>
+                                <a href="mailto:contact@bananavillaswatamu.com">contact@bananavillaswatamu.com</a>
+                            </div>
+                        </div>
+                        <div class="platform-links">
+                            <a href="https://www.airbnb.com/rooms/1244860553597616148" class="btn-platform"
+                                target="_blank" rel="noopener noreferrer"><i data-lucide="home"></i> Airbnb</a>
+                            <a href="https://www.booking.com/hotel/ke/banana-house-villas-watamu.html"
+                                class="btn-platform" target="_blank" rel="noopener noreferrer"><i
+                                    data-lucide="building-2"></i> Booking.com</a>
+                        </div>
+                    </div>
+                    <form class="contact-form" onsubmit="event.preventDefault();">
+                        <div id="contactFormError" class="form-error-banner" style="display:none;"></div>
+                        <div id="contactAvailabilityWarning" class="availability-note" style="display:none;"></div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="contactCheckin">Check-in</label>
+                                <input type="date" id="contactCheckin" name="checkin" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="contactCheckout">Check-out</label>
+                                <input type="date" id="contactCheckout" name="checkout" required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="contactAdults">Adults</label>
+                                <input type="number" id="contactAdults" name="adults" min="1" max="10" value="2"
+                                    required>
+                            </div>
+                            <div class="form-group">
+                                <label for="contactKids">Kids</label>
+                                <input type="number" id="contactKids" name="kids" min="0" max="9" value="0" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="contactName">Name</label>
+                            <input type="text" id="contactName" name="name" required placeholder="Your Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="contactEmail">Email <span class="optional">(optional)</span></label>
+                            <input type="email" id="contactEmail" name="email" placeholder="Your Email">
+                        </div>
+                        <div class="form-group">
+                            <label for="contactPhone">Phone Number</label>
+                            <input type="tel" id="contactPhone" name="phone" required placeholder="Your Phone Number">
+                        </div>
+                        <div class="form-group">
+                            <label for="contactMessage">Message <span class="optional">(optional)</span></label>
+                            <textarea id="contactMessage" name="message" rows="3"
+                                placeholder="Any questions or special requests?"></textarea>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" id="contactTransfer" name="transfer">
+                            <label for="contactTransfer">I'd like airport transfer / pickup service</label>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="btnContactFormWhatsapp"
+                                class="btn-primary btn-whatsapp btn-full">Request via WhatsApp</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="lightbox">
+        <span class="lightbox-close">&times;</span>
+        <div class="lightbox-content">
+            <img id="lightbox-img" src="" alt="Full view">
+        </div>
+        <button class="lightbox-prev" aria-label="Previous image">&#10094;</button>
+        <button class="lightbox-next" aria-label="Next image">&#10095;</button>
+    </div>
+
+    <!-- Sticky WhatsApp Float -->
+    <a href="https://wa.me/254715257111" target="_blank" class="whatsapp-float" aria-label="Chat on WhatsApp">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" width="28" height="28">
+            <path
+                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+        </svg>
+    </a>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo"
+                        style="height: 50px; margin-bottom: 0.5rem; background-color: rgba(255,255,255,0.9); padding: 5px; border-radius: 4px;">
+                    <p>Your Vacation Starts Here</p>
+                </div>
+                <div class="footer-links">
+                    <a href="#gallery">Gallery</a>
+                    <a href="#about">About</a>
+                    <a href="#amenities">Amenities</a>
+                    <a href="#testimonials">Reviews</a>
+                    <a href="#faq">FAQ</a>
+                    <a href="#contact">Contact</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Banana Villas Watamu. All rights reserved.</p>
+                <a href="admin.html" target="_blank" rel="noopener noreferrer nofollow" class="footer-admin-link">Admin</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+    <script src="script.js"></script>
+</body>
+
+</html>

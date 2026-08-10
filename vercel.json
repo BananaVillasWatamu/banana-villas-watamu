@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/api/index" }
+  ],
+  "crons": [
+    { "path": "/api/cron/expire-holds", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/sync-ical", "schedule": "15 3 * * *" }
+  ],
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "home.template.html"
+    }
+  }
+}

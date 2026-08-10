@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin | Banana Villas Watamu</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" href="images/banana-villas-watamu-logo.png" type="image/png">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="admin.css">
+</head>
+
+<body class="admin-body">
+
+    <!-- Login -->
+    <div id="loginView" class="admin-login-wrap">
+        <form id="loginForm" class="glass-card admin-login-card">
+            <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo" class="admin-login-logo">
+            <h1>Admin Login</h1>
+            <div id="loginError" class="form-error-banner" style="display:none;"></div>
+            <div class="form-group">
+                <label for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="loginPassword">Password</label>
+                <input type="password" id="loginPassword" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn-primary btn-full" id="loginBtn">Log In</button>
+        </form>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboardView" class="admin-shell" style="display:none;">
+        <aside class="admin-sidebar">
+            <div class="admin-sidebar-brand">
+                <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo">
+                <span>Admin Dashboard</span>
+            </div>
+            <nav class="admin-sidebar-nav">
+                <button class="admin-tab active" data-tab="home">Home</button>
+                <button class="admin-tab" data-tab="bookings">Bookings</button>
+                <button class="admin-tab" data-tab="reviews">Reviews</button>
+                <button class="admin-tab" data-tab="gallery">Gallery</button>
+                <button class="admin-tab" data-tab="seo">SEO</button>
+            </nav>
+            <button id="logoutBtn" class="admin-btn-secondary admin-sidebar-logout">Log Out</button>
+        </aside>
+
+        <main class="admin-main">
+
+            <!-- Home -->
+            <section id="tab-home" class="admin-panel active">
+                <div class="admin-panel-header">
+                    <h2>Home</h2>
+                    <span id="homeTodayLabel" class="admin-sync-status"></span>
+                </div>
+
+                <div class="admin-home-grid">
+                    <div class="admin-card">
+                        <h3>Today</h3>
+                        <div class="admin-home-sub">
+                            <div>
+                                <h4>Check-ins</h4>
+                                <ul id="homeCheckinsToday" class="admin-home-list"></ul>
+                            </div>
+                            <div>
+                                <h4>Check-outs</h4>
+                                <ul id="homeCheckoutsToday" class="admin-home-list"></ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="admin-card">
+                        <h3>Next 7 days</h3>
+                        <div class="admin-home-sub">
+                            <div>
+                                <h4>Check-ins</h4>
+                                <ul id="homeCheckinsWeek" class="admin-home-list"></ul>
+                            </div>
+                            <div>
+                                <h4>Check-outs</h4>
+                                <ul id="homeCheckoutsWeek" class="admin-home-list"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-card">
+                    <h3>All active bookings</h3>
+                    <div class="admin-table-wrap">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>Check-in</th>
+                                    <th>Check-out</th>
+                                    <th>Guest</th>
+                                    <th>Status</th>
+                                    <th>Source</th>
+                                </tr>
+                            </thead>
+                            <tbody id="homeActiveBookingsBody">
+                                <tr>
+                                    <td colspan="5" class="admin-table-empty">Loading…</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bookings -->
+            <section id="tab-bookings" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>Bookings</h2>
+                    <button id="addBookingBtn" class="admin-btn-secondary">+ Add booking</button>
+                </div>
+                <div id="bookingsError" class="form-error-banner" style="display:none;"></div>
+
+                <!-- Add booking -->
+                <form id="addBookingForm" class="admin-form" style="display:none;">
+                    <p class="admin-hint">For bookings taken by phone, walk-in, or anywhere off-site. It's saved as
+                        confirmed right away and immediately blocks those dates.</p>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newBookingName">Guest name</label>
+                            <input type="text" id="newBookingName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newBookingPhone">Phone</label>
+                            <input type="tel" id="newBookingPhone" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newBookingCheckin">Check-in</label>
+                            <input type="date" id="newBookingCheckin" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="newBookingCheckout">Check-out</label>
+                            <input type="date" id="newBookingCheckout" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newBookingAdults">Adults</label>
+                            <input type="number" id="newBookingAdults" min="1" max="10" value="2">
+                        </div>
+                        <div class="form-group">
+                            <label for="newBookingKids">Kids</label>
+                            <input type="number" id="newBookingKids" min="0" max="9" value="0">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="newBookingEmail">Email <span class="optional">(optional)</span></label>
+                        <input type="email" id="newBookingEmail">
+                    </div>
+                    <div class="form-group">
+                        <label for="newBookingNotes">Notes <span class="optional">(optional)</span></label>
+                        <textarea id="newBookingNotes" rows="2"></textarea>
+                    </div>
+                    <div class="form-actions admin-form-actions">
+                        <button type="submit" class="btn-primary">Add booking</button>
+                        <button type="button" id="cancelAddBookingBtn" class="admin-btn-secondary">Cancel</button>
+                    </div>
+                </form>
+
+                <!-- Calendar -->
+                <div class="admin-card">
+                    <div class="admin-calendar-header">
+                        <button type="button" id="calPrevBtn" class="admin-btn-secondary" aria-label="Previous month">&larr;</button>
+                        <h3 id="calendarMonthLabel">—</h3>
+                        <button type="button" id="calNextBtn" class="admin-btn-secondary" aria-label="Next month">&rarr;</button>
+                    </div>
+                    <div class="admin-calendar-weekdays">
+                        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                    </div>
+                    <div id="calendarGrid" class="admin-calendar-grid"></div>
+                    <div class="admin-calendar-legend">
+                        <span><i class="cal-swatch cal-pending"></i> Pending hold</span>
+                        <span><i class="cal-swatch cal-confirmed"></i> Confirmed (direct)</span>
+                        <span><i class="cal-swatch cal-airbnb"></i> Airbnb</span>
+                        <span><i class="cal-swatch cal-bookingcom"></i> Booking.com</span>
+                        <span><i class="cal-swatch cal-blocked"></i> Blocked</span>
+                    </div>
+                </div>
+
+                <!-- Block dates -->
+                <div class="admin-card">
+                    <h3>Block dates</h3>
+                    <p class="admin-hint">Click a start day then an end day on the calendar to fill these in, or type them directly. Use this for personal stays, maintenance, or anything else that should stop guests from booking.</p>
+                    <form id="blockDatesForm" class="admin-inline-form">
+                        <div class="form-group">
+                            <label for="blockStart">Start</label>
+                            <input type="date" id="blockStart" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="blockEnd">End</label>
+                            <input type="date" id="blockEnd" required>
+                        </div>
+                        <div class="form-group" style="flex:1;min-width:180px;">
+                            <label for="blockNote">Note <span class="optional">(optional)</span></label>
+                            <input type="text" id="blockNote" placeholder="e.g. Personal use, maintenance">
+                        </div>
+                        <button type="submit" class="btn-primary">Block dates</button>
+                    </form>
+                </div>
+
+                <!-- iCal sync settings -->
+                <div class="admin-card">
+                    <h3>Calendar sync (iCal)</h3>
+                    <p class="admin-hint">Paste your Airbnb host calendar export link and your Booking.com extranet
+                        export link here. We check them automatically once a day, or trigger it manually below.</p>
+                    <form id="icalSettingsForm" class="admin-form">
+                        <div class="form-group">
+                            <label for="airbnbIcalUrl">Airbnb iCal export URL</label>
+                            <input type="url" id="airbnbIcalUrl" placeholder="https://www.airbnb.com/calendar/ical/....ics">
+                        </div>
+                        <div class="form-group">
+                            <label for="bookingIcalUrl">Booking.com iCal export URL</label>
+                            <input type="url" id="bookingIcalUrl" placeholder="https://admin.booking.com/hotel/hoteladmin/ical.html?...">
+                        </div>
+                        <div class="form-actions admin-form-actions">
+                            <button type="submit" class="btn-primary">Save calendar links</button>
+                            <button type="button" id="syncIcalBtn" class="admin-btn-secondary">Sync calendars now</button>
+                        </div>
+                        <p id="syncStatus" class="admin-sync-status"></p>
+                    </form>
+                </div>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Check-in</th>
+                                <th>Check-out</th>
+                                <th>Guest</th>
+                                <th>Contact</th>
+                                <th>Guests</th>
+                                <th>Status</th>
+                                <th>Source</th>
+                                <th>Hold expires</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingsTableBody">
+                            <tr>
+                                <td colspan="9" class="admin-table-empty">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Reviews -->
+            <section id="tab-reviews" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>Reviews</h2>
+                    <button id="addReviewBtn" class="admin-btn-secondary">+ Add review</button>
+                </div>
+                <div id="reviewsError" class="form-error-banner" style="display:none;"></div>
+
+                <form id="reviewForm" class="admin-form" style="display:none;">
+                    <input type="hidden" id="reviewId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="reviewGuestName">Guest name</label>
+                            <input type="text" id="reviewGuestName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reviewRating">Rating</label>
+                            <select id="reviewRating" required>
+                                <option value="5">★★★★★ (5)</option>
+                                <option value="4">★★★★☆ (4)</option>
+                                <option value="3">★★★☆☆ (3)</option>
+                                <option value="2">★★☆☆☆ (2)</option>
+                                <option value="1">★☆☆☆☆ (1)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="reviewDate">Review date</label>
+                            <input type="date" id="reviewDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reviewSourceUrl">Source link <span class="optional">(optional)</span></label>
+                            <input type="url" id="reviewSourceUrl" placeholder="https://airbnb.com/...">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="reviewBody">Review text</label>
+                        <textarea id="reviewBody" rows="3" required></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="reviewPublished" checked>
+                        <label for="reviewPublished">Published (visible on the public site)</label>
+                    </div>
+                    <div class="form-actions admin-form-actions">
+                        <button type="submit" class="btn-primary">Save review</button>
+                        <button type="button" id="cancelReviewBtn" class="admin-btn-secondary">Cancel</button>
+                    </div>
+                </form>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Rating</th>
+                                <th>Guest</th>
+                                <th>Date</th>
+                                <th>Review</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reviewsTableBody">
+                            <tr>
+                                <td colspan="6" class="admin-table-empty">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Gallery -->
+            <section id="tab-gallery" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>Gallery</h2>
+                    <label class="btn-primary admin-upload-btn">
+                        + Upload photo
+                        <input type="file" id="galleryUploadInput" accept="image/*" hidden>
+                    </label>
+                </div>
+                <div id="galleryError" class="form-error-banner" style="display:none;"></div>
+                <p id="galleryUploadStatus" class="admin-sync-status"></p>
+                <div id="galleryAdminGrid" class="admin-gallery-grid">
+                    <p class="admin-table-empty">Loading…</p>
+                </div>
+            </section>
+
+            <!-- SEO -->
+            <section id="tab-seo" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>SEO &amp; Social Preview</h2>
+                </div>
+                <div id="seoError" class="form-error-banner" style="display:none;"></div>
+                <p class="admin-hint">Changes apply on the live site within about 5 minutes (the homepage is cached
+                    briefly for speed).</p>
+                <form id="seoForm" class="admin-form">
+                    <div class="form-group">
+                        <label for="seoTitle">Page title</label>
+                        <input type="text" id="seoTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="seoDescription">Meta description</label>
+                        <textarea id="seoDescription" rows="2" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="ogTitle">Social share title <span class="optional">(optional, falls back to page
+                                title)</span></label>
+                        <input type="text" id="ogTitle">
+                    </div>
+                    <div class="form-group">
+                        <label for="ogDescription">Social share description <span class="optional">(optional, falls
+                                back to meta description)</span></label>
+                        <textarea id="ogDescription" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="ogImageUrl">Social share image URL <span class="optional">(optional — paste a
+                                gallery image URL)</span></label>
+                        <input type="url" id="ogImageUrl" placeholder="https://...">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Save SEO settings</button>
+                    </div>
+                </form>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabaseClient.js"></script>
+    <script src="admin.js"></script>
+</body>
+
+</html>
