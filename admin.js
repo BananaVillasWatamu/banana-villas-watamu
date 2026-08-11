@@ -121,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bookingsCache = data || [];
         renderCalendar();
         renderHome();
+        if (selectedDetailDate) renderDateDetails(selectedDetailDate);
 
         if (bookingsCache.length === 0) {
             bookingsTableBody.innerHTML = '<tr><td colspan="9" class="admin-table-empty">No bookings yet.</td></tr>';
@@ -140,8 +141,14 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button class="admin-btn-confirm" data-action="confirm" data-id="${b.id}">Confirm</button>
                         <button class="admin-btn-decline" data-action="decline" data-id="${b.id}">Decline</button>
                    </div>`;
-            } else if (b.status === 'confirmed') {
+            } else if (b.status === 'confirmed' && b.source === 'direct') {
                 actions = `<div class="admin-row-actions"><button class="admin-btn-decline" data-action="decline" data-id="${b.id}">Cancel</button></div>`;
+            } else if (b.status === 'confirmed') {
+                // Airbnb/Booking.com bookings are read-only here — cancelling
+                // them locally would desync from the real reservation on
+                // that platform. They only change via the next iCal sync.
+                const sourceLabel = b.source === 'airbnb' ? 'Airbnb' : 'Booking.com';
+                actions = `<span class="admin-sync-status">Synced from ${sourceLabel}</span>`;
             } else {
                 actions = '—';
             }
@@ -167,24 +174,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
+    // Shared by the table's "Unblock" button and clicking a blocked day on
+    // the calendar. Only ever called for source='blocked' rows — never for
+    // Airbnb/Booking.com bookings, which aren't ours to remove locally.
+    async function unblockBooking(booking) {
+        const proceed = confirm(
+            `Unblock ${booking.checkin} to ${booking.checkout}${booking.notes ? ` (${booking.notes})` : ''}? These dates will become available again.`
+        );
+        if (!proceed) return;
+        const { error } = await sbClient.from('bookings').delete().eq('id', booking.id);
+        if (error) showError('bookingsError', 'Failed to unblock those dates.');
+        loadBookings();
+    }
+
     bookingsTableBody.addEventListener('click', async (e) => {
         const btn = e.target.closest('button[data-action]');
         if (!btn) return;
         const id = btn.dataset.id;
 
-        btn.disabled = true;
-
         if (btn.dataset.action === 'unblock') {
-            const { error } = await sbClient.from('bookings').delete().eq('id', id);
-            if (error) showError('bookingsError', 'Failed to unblock those dates.');
-        } else {
-            const newStatus = btn.dataset.action === 'confirm' ? 'confirmed' : 'declined';
-            const { error } = await sbClient
-                .from('bookings')
-                .update({ status: newStatus, updated_at: new Date().toISOString() })
-                .eq('id', id);
-            if (error) showError('bookingsError', 'Failed to update booking.');
+            const booking = bookingsCache.find((b) => b.id === id);
+            if (booking) await unblockBooking(booking);
+            return;
         }
+
+        btn.disabled = true;
+        const newStatus = btn.dataset.action === 'confirm' ? 'confirmed' : 'declined';
+        const { error } = await sbClient
+            .from('bookings')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        if (error) showError('bookingsError', 'Failed to update booking.');
         loadBookings();
     });
 
@@ -361,8 +381,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const calendarGrid = document.getElementById('calendarGrid');
     const calendarMonthLabel = document.getElementById('calendarMonthLabel');
+    const dateDetailsBody = document.getElementById('dateDetailsBody');
     let calendarMonth = new Date();
     calendarMonth.setDate(1);
+    let selectedDetailDate = null;
 
     const getDateStatus = (dateStr) => {
         const d = new Date(`${dateStr}T00:00:00`);
@@ -372,18 +394,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (d < ci || d >= co) continue;
 
             if (b.source === 'blocked') {
-                return { className: 'cal-blocked', label: `Blocked${b.notes ? `: ${b.notes}` : ''}` };
+                return { className: 'cal-blocked', label: `Blocked${b.notes ? `: ${b.notes}` : ''}`, booking: b };
             }
             if (b.status === 'pending' && (!b.hold_expires_at || new Date(b.hold_expires_at) > Date.now())) {
-                return { className: 'cal-pending', label: `Pending hold — ${b.guest_name || 'guest'}` };
+                return { className: 'cal-pending', label: `Pending hold — ${b.guest_name || 'guest'}`, booking: b };
             }
             if (b.status === 'confirmed') {
-                if (b.source === 'airbnb') return { className: 'cal-airbnb', label: 'Airbnb booking' };
-                if (b.source === 'booking_com') return { className: 'cal-bookingcom', label: 'Booking.com booking' };
-                return { className: 'cal-confirmed', label: `Confirmed — ${b.guest_name || 'guest'}` };
+                if (b.source === 'airbnb') return { className: 'cal-airbnb', label: 'Airbnb booking', booking: b };
+                if (b.source === 'booking_com') return { className: 'cal-bookingcom', label: 'Booking.com booking', booking: b };
+                return { className: 'cal-confirmed', label: `Confirmed — ${b.guest_name || 'guest'}`, booking: b };
             }
         }
-        return { className: '', label: 'Available' };
+        return { className: '', label: 'Available', booking: null };
     };
 
     const renderCalendar = () => {
@@ -401,8 +423,9 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const status = getDateStatus(dateStr);
+            const selected = dateStr === selectedDetailDate ? ' cal-cell-selected' : '';
             cellsHtml.push(
-                `<div class="cal-cell ${status.className}" data-date="${dateStr}" title="${escapeHtml(status.label)}">${d}</div>`
+                `<div class="cal-cell ${status.className}${selected}" data-date="${dateStr}" title="${escapeHtml(status.label)}">${d}</div>`
             );
         }
         calendarGrid.innerHTML = cellsHtml.join('');
@@ -417,11 +440,120 @@ document.addEventListener('DOMContentLoaded', () => {
         renderCalendar();
     });
 
-    // Clicking days fills the block-dates form: first click sets the start,
-    // second click sets the end (and a third starts over).
+    const dateDetailsLabel = (dateStr) =>
+        new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', {
+            weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+        });
+
+    function renderDateDetails(dateStr) {
+        selectedDetailDate = dateStr;
+        const { booking: b } = getDateStatus(dateStr);
+        const heading = `<p class="admin-date-details-date">${dateDetailsLabel(dateStr)}</p>`;
+
+        if (!b) {
+            dateDetailsBody.innerHTML = `
+                ${heading}
+                <span class="admin-status-pill" style="background:transparent;border:1px solid var(--glass-border);color:var(--text-light);">Available</span>
+                <p class="admin-hint" style="margin-top:0.75rem;">Click another day to select a range, then use the Block dates form below — or wait for a guest to book it.</p>`;
+            return;
+        }
+
+        const range = `${b.checkin} → ${b.checkout}`;
+        const contact = [b.phone, b.email].filter(Boolean).map(escapeHtml).join('<br>') || '—';
+        const guests = (b.adults || b.kids) ? `${b.adults || 0}A / ${b.kids || 0}K` : '—';
+
+        if (b.source === 'blocked') {
+            dateDetailsBody.innerHTML = `
+                ${heading}
+                <span class="admin-status-pill admin-status-blocked">Blocked</span>
+                <dl class="admin-date-details-list">
+                    <dt>Dates</dt><dd>${range}</dd>
+                    <dt>Reason</dt><dd>${escapeHtml(b.notes || '—')}</dd>
+                </dl>
+                <button class="admin-btn-decline" data-action="unblock-detail" data-id="${b.id}">Unblock these dates</button>`;
+            return;
+        }
+
+        if (b.status === 'pending') {
+            dateDetailsBody.innerHTML = `
+                ${heading}
+                <span class="admin-status-pill admin-status-pending">Pending hold</span>
+                <dl class="admin-date-details-list">
+                    <dt>Dates</dt><dd>${range}</dd>
+                    <dt>Guest</dt><dd>${escapeHtml(b.guest_name || '—')}</dd>
+                    <dt>Contact</dt><dd>${contact}</dd>
+                    <dt>Guests</dt><dd>${guests}</dd>
+                    <dt>Hold expires</dt><dd>${formatHoldCountdown(b.hold_expires_at)}</dd>
+                </dl>
+                <div class="admin-row-actions">
+                    <button class="admin-btn-confirm" data-action="confirm-detail" data-id="${b.id}">Confirm</button>
+                    <button class="admin-btn-decline" data-action="decline-detail" data-id="${b.id}">Decline</button>
+                </div>`;
+            return;
+        }
+
+        if (b.source === 'direct') {
+            dateDetailsBody.innerHTML = `
+                ${heading}
+                <span class="admin-status-pill admin-status-confirmed">Confirmed</span>
+                <dl class="admin-date-details-list">
+                    <dt>Dates</dt><dd>${range}</dd>
+                    <dt>Guest</dt><dd>${escapeHtml(b.guest_name || '—')}</dd>
+                    <dt>Contact</dt><dd>${contact}</dd>
+                    <dt>Guests</dt><dd>${guests}</dd>
+                </dl>
+                <button class="admin-btn-decline" data-action="decline-detail" data-id="${b.id}">Cancel booking</button>`;
+            return;
+        }
+
+        // Airbnb / Booking.com — read-only, no guest details available from
+        // the iCal feed, and cancelling here wouldn't touch the real
+        // reservation on that platform.
+        const sourceLabel = b.source === 'airbnb' ? 'Airbnb' : 'Booking.com';
+        const pillClass = b.source === 'airbnb' ? 'admin-status-airbnb' : 'admin-status-bookingcom';
+        dateDetailsBody.innerHTML = `
+            ${heading}
+            <span class="admin-status-pill ${pillClass}">${sourceLabel}</span>
+            <dl class="admin-date-details-list">
+                <dt>Dates</dt><dd>${range}</dd>
+            </dl>
+            <p class="admin-hint" style="margin-top:0.75rem;">Synced from ${sourceLabel} — guest details aren't available here. Manage or cancel this reservation directly on ${sourceLabel}; the next calendar sync keeps this in step.</p>`;
+    }
+
+    dateDetailsBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const booking = bookingsCache.find((b) => b.id === btn.dataset.id);
+        if (!booking) return;
+
+        if (btn.dataset.action === 'unblock-detail') {
+            await unblockBooking(booking);
+            return;
+        }
+
+        btn.disabled = true;
+        const newStatus = btn.dataset.action === 'confirm-detail' ? 'confirmed' : 'declined';
+        const { error } = await sbClient
+            .from('bookings')
+            .update({ status: newStatus, updated_at: new Date().toISOString() })
+            .eq('id', booking.id);
+        if (error) showError('bookingsError', 'Failed to update booking.');
+        loadBookings();
+    });
+
+    // Clicking an available day drives the block-dates range selection
+    // below (first click = start, second = end). Clicking a day that's
+    // already booked or blocked only shows its details — it doesn't touch
+    // the block form, since you can't block over an existing reservation.
     calendarGrid.addEventListener('click', (e) => {
         const cell = e.target.closest('.cal-cell[data-date]');
         if (!cell) return;
+
+        const status = getDateStatus(cell.dataset.date);
+        renderDateDetails(cell.dataset.date);
+        renderCalendar();
+
+        if (status.booking) return;
 
         const startInput = document.getElementById('blockStart');
         const endInput = document.getElementById('blockEnd');

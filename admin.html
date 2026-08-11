@@ -168,7 +168,7 @@
                     </div>
                 </form>
 
-                <!-- Calendar + Block dates, side by side -->
+                <!-- Calendar + Date details, side by side -->
                 <div class="admin-bookings-top-row">
                     <div class="admin-card admin-card-calendar">
                         <div class="admin-calendar-header">
@@ -189,26 +189,34 @@
                         </div>
                     </div>
 
-                    <!-- Block dates -->
-                    <div class="admin-card admin-card-block-dates">
-                        <h3>Block dates</h3>
-                        <p class="admin-hint">Click a start day then an end day on the calendar to fill these in, or type them directly. Use this for personal stays, maintenance, or anything else that should stop guests from booking.</p>
-                        <form id="blockDatesForm" class="admin-inline-form admin-inline-form-stacked">
-                            <div class="form-group">
-                                <label for="blockStart">Start</label>
-                                <input type="date" id="blockStart" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="blockEnd">End</label>
-                                <input type="date" id="blockEnd" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="blockNote">Note <span class="optional">(optional)</span></label>
-                                <input type="text" id="blockNote" placeholder="e.g. Personal use, maintenance">
-                            </div>
-                            <button type="submit" class="btn-primary">Block dates</button>
-                        </form>
+                    <!-- Date details -->
+                    <div class="admin-card admin-card-date-details">
+                        <h3>Date details</h3>
+                        <div id="dateDetailsBody">
+                            <p class="admin-hint">Click a date on the calendar to see what it's booked or blocked for.</p>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Block dates -->
+                <div class="admin-card">
+                    <h3>Block dates</h3>
+                    <p class="admin-hint">Click a start day then an end day on an available date on the calendar to fill these in, or type them directly. Use this for personal stays, maintenance, or anything else that should stop guests from booking.</p>
+                    <form id="blockDatesForm" class="admin-inline-form">
+                        <div class="form-group">
+                            <label for="blockStart">Start</label>
+                            <input type="date" id="blockStart" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="blockEnd">End</label>
+                            <input type="date" id="blockEnd" required>
+                        </div>
+                        <div class="form-group" style="flex:1;min-width:180px;">
+                            <label for="blockNote">Note <span class="optional">(optional)</span></label>
+                            <input type="text" id="blockNote" placeholder="e.g. Personal use, maintenance">
+                        </div>
+                        <button type="submit" class="btn-primary">Block dates</button>
+                    </form>
                 </div>
 
                 <!-- iCal sync settings -->

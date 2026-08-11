@@ -270,6 +270,39 @@
     color: var(--text-light);
 }
 
+.admin-status-airbnb {
+    background: rgba(255, 56, 92, 0.15);
+    color: #c81e46;
+}
+
+.admin-status-bookingcom {
+    background: rgba(0, 53, 128, 0.12);
+    color: #003580;
+}
+
+/* Date details panel */
+.admin-date-details-date {
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 0.5rem;
+}
+
+.admin-date-details-list {
+    margin: 0.85rem 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.4rem 1rem;
+    font-size: 0.85rem;
+}
+
+.admin-date-details-list dt {
+    color: var(--text-light);
+}
+
+.admin-date-details-list dd {
+    color: var(--text-dark);
+}
+
 .admin-row-actions {
     display: flex;
     gap: 0.4rem;
@@ -317,11 +350,11 @@
     margin-bottom: 0.5rem;
 }
 
-/* Calendar sits beside Block dates instead of stacking, so the empty
-   space next to the (intentionally small) calendar gets used. */
+/* Calendar sits beside the Date details panel at roughly a 40:60 split;
+   Block dates moved to its own full-width row below. */
 .admin-bookings-top-row {
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 1.5rem;
     margin-bottom: 1.5rem;
 }
@@ -330,20 +363,9 @@
     margin-bottom: 0;
 }
 
-.admin-card-block-dates {
-    flex: 1;
+.admin-card-date-details {
+    flex: 1 1 60%;
     min-width: 260px;
-}
-
-.admin-inline-form.admin-inline-form-stacked {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.25rem;
-}
-
-.admin-inline-form-stacked .btn-primary {
-    align-self: flex-start;
-    margin-top: 0.5rem;
 }
 
 @media (max-width: 700px) {
@@ -360,8 +382,8 @@
 /* Calendar — capped width so cells stay small instead of stretching to
    fill the card on wide screens. */
 .admin-card-calendar {
+    flex: 1 1 40%;
     max-width: 320px;
-    flex-shrink: 0;
     padding: 1.1rem;
 }
 
