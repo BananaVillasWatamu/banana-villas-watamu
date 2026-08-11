@@ -317,10 +317,51 @@
     margin-bottom: 0.5rem;
 }
 
+/* Calendar sits beside Block dates instead of stacking, so the empty
+   space next to the (intentionally small) calendar gets used. */
+.admin-bookings-top-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.admin-bookings-top-row .admin-card {
+    margin-bottom: 0;
+}
+
+.admin-card-block-dates {
+    flex: 1;
+    min-width: 260px;
+}
+
+.admin-inline-form.admin-inline-form-stacked {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+}
+
+.admin-inline-form-stacked .btn-primary {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 700px) {
+    .admin-bookings-top-row {
+        flex-direction: column;
+    }
+
+    .admin-card-calendar {
+        max-width: 320px;
+        width: 100%;
+    }
+}
+
 /* Calendar — capped width so cells stay small instead of stretching to
    fill the card on wide screens. */
 .admin-card-calendar {
     max-width: 320px;
+    flex-shrink: 0;
     padding: 1.1rem;
 }
 

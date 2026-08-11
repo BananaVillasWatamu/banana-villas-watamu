@@ -168,45 +168,47 @@
                     </div>
                 </form>
 
-                <!-- Calendar -->
-                <div class="admin-card admin-card-calendar">
-                    <div class="admin-calendar-header">
-                        <button type="button" id="calPrevBtn" class="admin-btn-secondary" aria-label="Previous month">&larr;</button>
-                        <h3 id="calendarMonthLabel">—</h3>
-                        <button type="button" id="calNextBtn" class="admin-btn-secondary" aria-label="Next month">&rarr;</button>
+                <!-- Calendar + Block dates, side by side -->
+                <div class="admin-bookings-top-row">
+                    <div class="admin-card admin-card-calendar">
+                        <div class="admin-calendar-header">
+                            <button type="button" id="calPrevBtn" class="admin-btn-secondary" aria-label="Previous month">&larr;</button>
+                            <h3 id="calendarMonthLabel">—</h3>
+                            <button type="button" id="calNextBtn" class="admin-btn-secondary" aria-label="Next month">&rarr;</button>
+                        </div>
+                        <div class="admin-calendar-weekdays">
+                            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+                        </div>
+                        <div id="calendarGrid" class="admin-calendar-grid"></div>
+                        <div class="admin-calendar-legend">
+                            <span><i class="cal-swatch cal-pending"></i> Pending hold</span>
+                            <span><i class="cal-swatch cal-confirmed"></i> Confirmed (direct)</span>
+                            <span><i class="cal-swatch cal-airbnb"></i> Airbnb</span>
+                            <span><i class="cal-swatch cal-bookingcom"></i> Booking.com</span>
+                            <span><i class="cal-swatch cal-blocked"></i> Blocked</span>
+                        </div>
                     </div>
-                    <div class="admin-calendar-weekdays">
-                        <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
-                    </div>
-                    <div id="calendarGrid" class="admin-calendar-grid"></div>
-                    <div class="admin-calendar-legend">
-                        <span><i class="cal-swatch cal-pending"></i> Pending hold</span>
-                        <span><i class="cal-swatch cal-confirmed"></i> Confirmed (direct)</span>
-                        <span><i class="cal-swatch cal-airbnb"></i> Airbnb</span>
-                        <span><i class="cal-swatch cal-bookingcom"></i> Booking.com</span>
-                        <span><i class="cal-swatch cal-blocked"></i> Blocked</span>
-                    </div>
-                </div>
 
-                <!-- Block dates -->
-                <div class="admin-card">
-                    <h3>Block dates</h3>
-                    <p class="admin-hint">Click a start day then an end day on the calendar to fill these in, or type them directly. Use this for personal stays, maintenance, or anything else that should stop guests from booking.</p>
-                    <form id="blockDatesForm" class="admin-inline-form">
-                        <div class="form-group">
-                            <label for="blockStart">Start</label>
-                            <input type="date" id="blockStart" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="blockEnd">End</label>
-                            <input type="date" id="blockEnd" required>
-                        </div>
-                        <div class="form-group" style="flex:1;min-width:180px;">
-                            <label for="blockNote">Note <span class="optional">(optional)</span></label>
-                            <input type="text" id="blockNote" placeholder="e.g. Personal use, maintenance">
-                        </div>
-                        <button type="submit" class="btn-primary">Block dates</button>
-                    </form>
+                    <!-- Block dates -->
+                    <div class="admin-card admin-card-block-dates">
+                        <h3>Block dates</h3>
+                        <p class="admin-hint">Click a start day then an end day on the calendar to fill these in, or type them directly. Use this for personal stays, maintenance, or anything else that should stop guests from booking.</p>
+                        <form id="blockDatesForm" class="admin-inline-form admin-inline-form-stacked">
+                            <div class="form-group">
+                                <label for="blockStart">Start</label>
+                                <input type="date" id="blockStart" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="blockEnd">End</label>
+                                <input type="date" id="blockEnd" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="blockNote">Note <span class="optional">(optional)</span></label>
+                                <input type="text" id="blockNote" placeholder="e.g. Personal use, maintenance">
+                            </div>
+                            <button type="submit" class="btn-primary">Block dates</button>
+                        </form>
+                    </div>
                 </div>
 
                 <!-- iCal sync settings -->
