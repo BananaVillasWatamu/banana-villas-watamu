@@ -776,9 +776,20 @@ footer {
     .about-grid, .contact-wrapper {
         grid-template-columns: 1fr;
     }
-    
+
     .contact-wrapper {
         padding: 2rem;
+    }
+
+    /* Form first, then the "Request Availability" intro/contact
+       details/platform links below it -- so guests hit the fields
+       right away instead of scrolling past a wall of text first. */
+    .contact-form {
+        order: 1;
+    }
+
+    .contact-info {
+        order: 2;
     }
 }
 
