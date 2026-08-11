@@ -120,12 +120,18 @@ begin
 end;
 $$;
 
--- Postgres grants EXECUTE on new functions to PUBLIC (which includes the
--- anon role) by default. Since this function is SECURITY DEFINER, that
--- would let anyone with the public anon key call it directly over
--- PostgREST — bypassing the input validation and rate limiting that live
--- in /api/bookings.js. Lock it down to only the server's service-role key.
+-- Postgres grants EXECUTE on new functions to PUBLIC by default, and
+-- Supabase additionally auto-grants EXECUTE directly to the anon and
+-- authenticated roles via its default privileges on the public schema —
+-- so revoking from PUBLIC alone is NOT enough; anon's own direct grant
+-- survives that. Since this function is SECURITY DEFINER, leaving either
+-- grant in place lets anyone with the public anon key call it directly
+-- over PostgREST, bypassing the input validation and rate limiting that
+-- live in /api/bookings.js. Revoke from all three explicitly and only
+-- grant back to the server's service-role key.
 revoke execute on function request_booking(date, date, text, text, text, int, int, text) from public;
+revoke execute on function request_booking(date, date, text, text, text, int, int, text) from anon;
+revoke execute on function request_booking(date, date, text, text, text, int, int, text) from authenticated;
 grant execute on function request_booking(date, date, text, text, text, int, int, text) to service_role;
 
 -- Gallery ------------------------------------------------------------------
