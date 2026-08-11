@@ -4,13 +4,25 @@ document.addEventListener('DOMContentLoaded', () => {
         lucide.createIcons();
     }
 
-    // Inline form error helper
+    // Inline form error/success helpers
     const showFormError = (id, message) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.textContent = message;
         el.style.display = 'block';
         setTimeout(() => { el.style.display = 'none'; }, 5000);
+    };
+
+    const showFormSuccess = (id, message) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.textContent = message;
+        el.style.display = 'block';
+    };
+
+    const hideFormMessage = (id) => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
     };
 
     const escapeHtml = (str) => String(str ?? '')
@@ -240,6 +252,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const transfer = document.getElementById('contactTransfer').checked;
             const notes = document.getElementById('contactMessage').value;
 
+            hideFormMessage('contactFormSuccess');
+
             if (!name || !phone || !checkin || !checkout) {
                 showFormError('contactFormError', 'Please fill in your Name, Phone Number, Check-in, and Check-out dates.');
                 return;
@@ -280,6 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     return;
                 }
+
+                showFormSuccess('contactFormSuccess', "Your request has been saved! Opening WhatsApp so you can send it to us directly — we'll confirm availability shortly.");
 
                 const whatsappNumber = "254715257111";
                 const message = encodeURIComponent(

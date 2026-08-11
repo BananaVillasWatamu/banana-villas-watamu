@@ -1123,6 +1123,16 @@ footer {
     margin-bottom: 1.25rem;
 }
 
+.form-success-banner {
+    background: rgba(45, 125, 111, 0.1);
+    border: 1px solid rgba(45, 125, 111, 0.3);
+    border-radius: var(--radius-sm);
+    color: var(--primary-color);
+    font-size: 0.875rem;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+}
+
 .availability-note {
     background: rgba(217, 119, 6, 0.1);
     border: 1px solid rgba(217, 119, 6, 0.3);
