@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const showDashboard = () => {
         loginView.style.display = 'none';
-        dashboardView.style.display = 'block';
+        dashboardView.style.display = 'flex';
         loadBookings();
         loadReviews();
         loadGallery();
