@@ -169,8 +169,128 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Hero "Request Availability" — carry the strip values into the booking
-    // form at the bottom and smooth-scroll to it (no popup).
+    // ---- Availability: shared date-range helpers ----
+    // (blockedRanges is populated later by the /api/blocked-dates fetch
+    // near the bottom of this file; these helpers just read whatever it
+    // currently holds, which is safe since none of them run until a user
+    // interaction happens well after that fetch kicks off.)
+    const toISODate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const isValidDateRange = (checkin, checkout) => Boolean(checkin && checkout && new Date(checkout) > new Date(checkin));
+    const nightsBetween = (checkin, checkout) => Math.round((new Date(checkout) - new Date(checkin)) / 86400000);
+    const rangesOverlap = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
+
+    let blockedRanges = [];
+
+    const hasOverlap = (checkin, checkout) => {
+        const start = new Date(checkin);
+        const end = new Date(checkout);
+        return blockedRanges.some(r => rangesOverlap(start, end, new Date(r.checkin), new Date(r.checkout)));
+    };
+
+    // Walks forward from the requested check-in, jumping past any blocked
+    // range it collides with, until it finds a stretch of `nights` free
+    // nights — used to suggest an alternative instead of a dead-end error.
+    const findNextAvailableRange = (desiredCheckin, nights) => {
+        const ranges = blockedRanges
+            .map(r => ({ start: new Date(r.checkin), end: new Date(r.checkout) }))
+            .sort((a, b) => a.start - b.start);
+
+        let candidateStart = new Date(desiredCheckin);
+        const horizon = new Date();
+        horizon.setDate(horizon.getDate() + 730);
+
+        let moved = true;
+        while (moved && candidateStart <= horizon) {
+            moved = false;
+            const candidateEnd = new Date(candidateStart);
+            candidateEnd.setDate(candidateEnd.getDate() + nights);
+            for (const r of ranges) {
+                if (candidateStart < r.end && candidateEnd > r.start) {
+                    candidateStart = new Date(r.end);
+                    moved = true;
+                    break;
+                }
+            }
+        }
+        if (candidateStart > horizon) return null;
+        const candidateEnd = new Date(candidateStart);
+        candidateEnd.setDate(candidateEnd.getDate() + nights);
+        return { checkin: toISODate(candidateStart), checkout: toISODate(candidateEnd) };
+    };
+
+    const formatDateRangeLabel = (checkin, checkout) => {
+        const opts = { month: 'short', day: 'numeric' };
+        const s = new Date(`${checkin}T00:00:00`).toLocaleDateString('en-US', opts);
+        const e = new Date(`${checkout}T00:00:00`).toLocaleDateString('en-US', opts);
+        return `${s} – ${e}`;
+    };
+
+    const renderAvailabilityNotice = (warningId, html) => {
+        const el = document.getElementById(warningId);
+        if (!el) return;
+        el.innerHTML = html;
+        el.style.display = 'block';
+    };
+
+    const hideAvailabilityNotice = (warningId) => {
+        const el = document.getElementById(warningId);
+        if (el) el.style.display = 'none';
+    };
+
+    const renderUnavailableSuggestion = (warningId, checkin, checkout) => {
+        const nights = nightsBetween(checkin, checkout);
+        const suggestion = findNextAvailableRange(checkin, nights);
+        if (!suggestion) {
+            renderAvailabilityNotice(warningId, "Sorry, those dates aren't available and we couldn't find an open stretch nearby. Please try different dates or message us on WhatsApp.");
+            return;
+        }
+        renderAvailabilityNotice(
+            warningId,
+            `Those dates aren't available. Next open ${nights}-night stretch: <strong>${formatDateRangeLabel(suggestion.checkin, suggestion.checkout)}</strong> — ` +
+            `<button type="button" class="availability-suggest-btn" data-checkin="${suggestion.checkin}" data-checkout="${suggestion.checkout}">Use these dates</button>`
+        );
+    };
+
+    const checkAndWarn = (checkinId, checkoutId, warningId) => {
+        const ci = document.getElementById(checkinId)?.value;
+        const co = document.getElementById(checkoutId)?.value;
+        if (!isValidDateRange(ci, co) || blockedRanges.length === 0) {
+            hideAvailabilityNotice(warningId);
+            return;
+        }
+        if (hasOverlap(ci, co)) {
+            renderUnavailableSuggestion(warningId, ci, co);
+        } else {
+            hideAvailabilityNotice(warningId);
+        }
+    };
+
+    // "Use these dates" buttons rendered inside a suggestion (hero and
+    // contact form share this one delegated handler).
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.availability-suggest-btn');
+        if (!btn) return;
+        const { checkin, checkout } = btn.dataset;
+        const warningEl = btn.closest('[id$="AvailabilityWarning"]');
+        if (!warningEl) return;
+        const isHero = warningEl.id === 'stripAvailabilityWarning';
+
+        const ciEl = document.getElementById(isHero ? 'checkin' : 'contactCheckin');
+        const coEl = document.getElementById(isHero ? 'checkout' : 'contactCheckout');
+        if (ciEl) { ciEl.value = checkin; ciEl.dispatchEvent(new Event('change')); }
+        if (coEl) { coEl.value = checkout; coEl.dispatchEvent(new Event('change')); }
+
+        hideAvailabilityNotice(warningEl.id);
+
+        if (isHero) {
+            copyHeroToContact();
+            scrollToBooking();
+        }
+    });
+
+    // ---- Hero "Check Availability" / "Reserve Now" button ----
+    // Carries the strip values into the booking form at the bottom and
+    // smooth-scrolls to it (no popup) once the chosen dates check out.
     const scrollToBooking = () => {
         const target = document.getElementById('contact');
         if (!target) return;
@@ -180,25 +300,99 @@ document.addEventListener('DOMContentLoaded', () => {
         window.scrollTo({ top, behavior: 'smooth' });
     };
 
+    const copyHeroToContact = () => {
+        const fieldMap = [
+            ['checkin', 'contactCheckin', 'change'],
+            ['checkout', 'contactCheckout', 'change'],
+            ['adults', 'contactAdults', 'input'],
+            ['kids', 'contactKids', 'input'],
+        ];
+        fieldMap.forEach(([from, to, evt]) => {
+            const src = document.getElementById(from);
+            const dst = document.getElementById(to);
+            if (src && dst && src.value !== '') {
+                dst.value = src.value;
+                dst.dispatchEvent(new Event(evt));
+            }
+        });
+    };
+
     const checkAvailabilityBtn = document.getElementById('checkAvailabilityBtn');
+
+    const updateHeroButtonLabel = () => {
+        if (!checkAvailabilityBtn) return;
+        checkAvailabilityBtn.textContent = isValidDateRange(checkinInput?.value, checkoutInput?.value)
+            ? 'Reserve Now'
+            : 'Check Availability';
+    };
+    updateHeroButtonLabel();
+
     if (checkAvailabilityBtn) {
         checkAvailabilityBtn.addEventListener('click', () => {
-            const fieldMap = [
-                ['checkin', 'contactCheckin', 'change'],
-                ['checkout', 'contactCheckout', 'change'],
-                ['adults', 'contactAdults', 'input'],
-                ['kids', 'contactKids', 'input'],
-            ];
-            fieldMap.forEach(([from, to, evt]) => {
-                const src = document.getElementById(from);
-                const dst = document.getElementById(to);
-                if (src && dst && src.value !== '') {
-                    dst.value = src.value;
-                    dst.dispatchEvent(new Event(evt));
-                }
-            });
+            const checkin = checkinInput?.value;
+            const checkout = checkoutInput?.value;
+
+            if (!isValidDateRange(checkin, checkout)) {
+                renderAvailabilityNotice('stripAvailabilityWarning', 'Please select both a check-in and check-out date.');
+                return;
+            }
+
+            if (hasOverlap(checkin, checkout)) {
+                renderUnavailableSuggestion('stripAvailabilityWarning', checkin, checkout);
+                return;
+            }
+
+            hideAvailabilityNotice('stripAvailabilityWarning');
+            copyHeroToContact();
             scrollToBooking();
         });
+    }
+
+    // ---- Mobile CTA + sticky bar ----
+    // Neither has its own date inputs (the booking strip is hidden on
+    // mobile), so both track the contact form's own check-in/check-out —
+    // the only date inputs mobile guests actually see until they scroll
+    // down. Both just navigate to the contact form; the real validation
+    // and suggestion UI live there via contactAvailabilityWarning.
+    const heroCtaMobile = document.getElementById('heroCtaMobile');
+    const stickyBar = document.getElementById('stickyAvailabilityBar');
+    const stickyBtn = document.getElementById('stickyAvailabilityBtn');
+    const stickyText = document.getElementById('stickyAvailabilityText');
+
+    const updateMobileAvailabilityUI = () => {
+        const ci = contactCheckin?.value;
+        const co = contactCheckout?.value;
+        const valid = isValidDateRange(ci, co);
+        const label = valid ? 'Reserve Now' : 'Check Availability';
+
+        if (heroCtaMobile) heroCtaMobile.textContent = label;
+        if (stickyBtn) stickyBtn.textContent = label;
+        if (stickyText) {
+            if (valid) {
+                const nights = nightsBetween(ci, co);
+                stickyText.textContent = `${formatDateRangeLabel(ci, co)} · ${nights} night${nights === 1 ? '' : 's'}`;
+            } else {
+                stickyText.textContent = 'Select your dates to reserve';
+            }
+        }
+    };
+    updateMobileAvailabilityUI();
+
+    if (heroCtaMobile) {
+        heroCtaMobile.addEventListener('click', (e) => {
+            e.preventDefault();
+            scrollToBooking();
+        });
+    }
+    if (stickyBtn) stickyBtn.addEventListener('click', scrollToBooking);
+
+    const heroSection = document.getElementById('hero');
+    if (stickyBar && heroSection) {
+        const heroObserver = new IntersectionObserver(
+            ([entry]) => stickyBar.classList.toggle('visible', !entry.isIntersecting),
+            { threshold: 0 }
+        );
+        heroObserver.observe(heroSection);
     }
 
     // Max Guest Logic (Max 10)
@@ -484,6 +678,66 @@ document.addEventListener('DOMContentLoaded', () => {
         'bento-wide', '', '', '', 'bento-large', '', '', 'bento-wide', '', '', 'bento-tall', ''
     ];
 
+    // Mobile "peek-a-boo" carousel overlay — a live position counter and,
+    // for reasonably-sized galleries, tappable dots. Only visible on
+    // mobile via CSS; harmless to run unconditionally since the grid
+    // doesn't scroll horizontally on desktop.
+    const MAX_GALLERY_DOTS = 10;
+    const initGalleryCarousel = () => {
+        const grid = document.getElementById('galleryGrid');
+        const counter = document.getElementById('galleryCounter');
+        const dotsWrap = document.getElementById('galleryDots');
+        if (!grid || !counter || !dotsWrap) return;
+
+        const items = Array.from(grid.querySelectorAll('.gallery-item'));
+        if (items.length === 0) {
+            counter.style.display = 'none';
+            dotsWrap.style.display = 'none';
+            return;
+        }
+        counter.style.display = '';
+        counter.textContent = `1 / ${items.length}`;
+
+        const showDots = items.length <= MAX_GALLERY_DOTS;
+        dotsWrap.style.display = showDots ? '' : 'none';
+        dotsWrap.innerHTML = showDots
+            ? items.map((_, i) => `<button type="button" class="${i === 0 ? 'active' : ''}" data-index="${i}" aria-label="Go to photo ${i + 1}"></button>`).join('')
+            : '';
+
+        // Content (counter/dots) is rebuilt every call since the image set
+        // can change (Supabase load replacing the static fallback), but
+        // the scroll/click listeners are bound to the grid element once —
+        // it's reused across calls, so re-adding them would stack
+        // duplicate listeners.
+        if (!grid.dataset.carouselBound) {
+            grid.dataset.carouselBound = 'true';
+
+            const updateActive = () => {
+                const els = Array.from(grid.querySelectorAll('.gallery-item'));
+                if (els.length === 0) return;
+                const step = els.length > 1 ? (els[1].offsetLeft - els[0].offsetLeft) : els[0].offsetWidth;
+                const index = Math.min(els.length - 1, Math.max(0, Math.round(grid.scrollLeft / (step || 1))));
+                counter.textContent = `${index + 1} / ${els.length}`;
+                dotsWrap.querySelectorAll('button').forEach((d, i) => d.classList.toggle('active', i === index));
+            };
+
+            let ticking = false;
+            grid.addEventListener('scroll', () => {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(() => { updateActive(); ticking = false; });
+            }, { passive: true });
+
+            dotsWrap.addEventListener('click', (e) => {
+                const btn = e.target.closest('button[data-index]');
+                if (!btn) return;
+                const target = grid.querySelectorAll('.gallery-item')[parseInt(btn.dataset.index, 10)];
+                if (target) target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            });
+        }
+    };
+    initGalleryCarousel();
+
     const loadGallery = async () => {
         if (typeof sbClient === 'undefined') return;
         try {
@@ -507,6 +761,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             grid.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
             initLightbox();
+            initGalleryCarousel();
         } catch (err) {
             console.error('failed to load gallery', err);
         }
@@ -515,49 +770,35 @@ document.addEventListener('DOMContentLoaded', () => {
     loadReviews();
     loadGallery();
 
-    // Blocked-dates heads-up — a UX nicety only. The real double-booking
-    // guard runs server-side in request_booking() when the form is
-    // actually submitted, so this is purely informational.
-    let blockedRanges = [];
-
-    const rangesOverlap = (aStart, aEnd, bStart, bEnd) => aStart < bEnd && aEnd > bStart;
-
-    const checkBlockedDates = (checkinId, checkoutId, warningId) => {
-        const warningEl = document.getElementById(warningId);
-        if (!warningEl) return;
-
-        const ci = document.getElementById(checkinId)?.value;
-        const co = document.getElementById(checkoutId)?.value;
-
-        if (!ci || !co || blockedRanges.length === 0) {
-            warningEl.style.display = 'none';
-            return;
-        }
-
-        const start = new Date(ci);
-        const end = new Date(co);
-        const overlaps = blockedRanges.some(r =>
-            rangesOverlap(start, end, new Date(r.checkin), new Date(r.checkout))
-        );
-
-        warningEl.textContent = overlaps
-            ? "Heads up: part of this date range looks unavailable. We'll confirm when you submit."
-            : '';
-        warningEl.style.display = overlaps ? 'block' : 'none';
-    };
-
+    // Populates blockedRanges (declared up with the availability helpers
+    // above) and wires up live re-checking as any date field changes. The
+    // real double-booking guard still runs server-side in
+    // request_booking() when the form is actually submitted — this is
+    // just the live heads-up + "next available" suggestion UI.
     fetch('/api/blocked-dates')
         .then(r => (r.ok ? r.json() : []))
         .then(ranges => {
             blockedRanges = Array.isArray(ranges) ? ranges : [];
-            checkBlockedDates('checkin', 'checkout', 'stripAvailabilityWarning');
-            checkBlockedDates('contactCheckin', 'contactCheckout', 'contactAvailabilityWarning');
+            checkAndWarn('checkin', 'checkout', 'stripAvailabilityWarning');
+            checkAndWarn('contactCheckin', 'contactCheckout', 'contactAvailabilityWarning');
         })
         .catch(err => console.error('failed to load blocked dates', err));
 
-    if (checkinInput) checkinInput.addEventListener('change', () => checkBlockedDates('checkin', 'checkout', 'stripAvailabilityWarning'));
-    if (checkoutInput) checkoutInput.addEventListener('change', () => checkBlockedDates('checkin', 'checkout', 'stripAvailabilityWarning'));
-    if (contactCheckin) contactCheckin.addEventListener('change', () => checkBlockedDates('contactCheckin', 'contactCheckout', 'contactAvailabilityWarning'));
-    if (contactCheckout) contactCheckout.addEventListener('change', () => checkBlockedDates('contactCheckin', 'contactCheckout', 'contactAvailabilityWarning'));
+    if (checkinInput) checkinInput.addEventListener('change', () => {
+        checkAndWarn('checkin', 'checkout', 'stripAvailabilityWarning');
+        updateHeroButtonLabel();
+    });
+    if (checkoutInput) checkoutInput.addEventListener('change', () => {
+        checkAndWarn('checkin', 'checkout', 'stripAvailabilityWarning');
+        updateHeroButtonLabel();
+    });
+    if (contactCheckin) contactCheckin.addEventListener('change', () => {
+        checkAndWarn('contactCheckin', 'contactCheckout', 'contactAvailabilityWarning');
+        updateMobileAvailabilityUI();
+    });
+    if (contactCheckout) contactCheckout.addEventListener('change', () => {
+        checkAndWarn('contactCheckin', 'contactCheckout', 'contactAvailabilityWarning');
+        updateMobileAvailabilityUI();
+    });
 
 });
