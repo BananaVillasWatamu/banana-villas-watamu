@@ -317,31 +317,44 @@
     margin-bottom: 0.5rem;
 }
 
-/* Calendar */
+/* Calendar — capped width so cells stay small instead of stretching to
+   fill the card on wide screens. */
+.admin-card-calendar {
+    max-width: 320px;
+    padding: 1.1rem;
+}
+
 .admin-calendar-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
 }
 
 .admin-calendar-header h3 {
     margin-bottom: 0;
+    font-size: 0.9rem;
+}
+
+.admin-calendar-header .admin-btn-secondary {
+    padding: 0.2rem 0.55rem;
+    font-size: 0.75rem;
+    line-height: 1.4;
 }
 
 .admin-calendar-weekdays,
 .admin-calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: 3px;
 }
 
 .admin-calendar-weekdays span {
     text-align: center;
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     font-weight: 600;
     color: var(--text-light);
-    padding-bottom: 0.4rem;
+    padding-bottom: 0.25rem;
 }
 
 .cal-cell {
@@ -349,9 +362,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-sm);
+    border-radius: 5px;
     background: var(--bg-light);
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     cursor: pointer;
     color: var(--text-dark);
     user-select: none;
@@ -397,10 +410,10 @@
 
 .admin-calendar-legend {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 1rem;
-    font-size: 0.8rem;
+    flex-direction: column;
+    gap: 0.35rem;
+    margin-top: 0.85rem;
+    font-size: 0.7rem;
     color: var(--text-light);
 }
 
@@ -411,10 +424,11 @@
 }
 
 .cal-swatch {
-    width: 12px;
-    height: 12px;
-    border-radius: 3px;
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
     display: inline-block;
+    flex-shrink: 0;
 }
 
 .admin-inline-form {
