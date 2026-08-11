@@ -378,38 +378,13 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     updateMobileAvailabilityUI();
 
-    // Opens the check-in field's native date picker. Called synchronously
-    // inside the click handlers below (not after a delay) so it still
-    // counts as part of the same user gesture — required by showPicker()
-    // in most browsers. preventScroll stops the browser's own "scroll the
-    // focused field into view" from fighting with our smooth scroll.
-    const openMobileDatePicker = () => {
-        if (!contactCheckin) return;
-        contactCheckin.focus({ preventScroll: true });
-        if (typeof contactCheckin.showPicker === 'function') {
-            try {
-                contactCheckin.showPicker();
-            } catch {
-                // Needs a user gesture or unsupported in this browser;
-                // the focus() above still opens it on iOS Safari.
-            }
-        }
-    };
-
-    const goToBookingForm = () => {
-        scrollToBooking();
-        if (!isValidDateRange(contactCheckin?.value, contactCheckout?.value)) {
-            openMobileDatePicker();
-        }
-    };
-
     if (heroCtaMobile) {
         heroCtaMobile.addEventListener('click', (e) => {
             e.preventDefault();
-            goToBookingForm();
+            scrollToBooking();
         });
     }
-    if (stickyBtn) stickyBtn.addEventListener('click', goToBookingForm);
+    if (stickyBtn) stickyBtn.addEventListener('click', scrollToBooking);
 
     const heroSection = document.getElementById('hero');
     if (stickyBar && heroSection) {
