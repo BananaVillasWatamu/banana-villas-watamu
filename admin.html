@@ -219,6 +219,21 @@
                     </form>
                 </div>
 
+                <!-- iCal export (share with Airbnb/Booking.com) -->
+                <div class="admin-card">
+                    <h3>Your calendar link</h3>
+                    <p class="admin-hint">Share this link with Airbnb and Booking.com (paste it into their "import
+                        calendar" / "sync calendar" settings) so they block dates you've confirmed here. It only
+                        exposes booked date ranges — no guest names or contact details.</p>
+                    <div class="admin-inline-form">
+                        <div class="form-group" style="flex:1;">
+                            <label for="icalExportUrl">Export URL</label>
+                            <input type="text" id="icalExportUrl" readonly>
+                        </div>
+                        <button type="button" id="copyIcalExportBtn" class="admin-btn-secondary">Copy link</button>
+                    </div>
+                </div>
+
                 <!-- iCal sync settings -->
                 <div class="admin-card">
                     <h3>Calendar sync (iCal)</h3>

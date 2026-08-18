@@ -599,6 +599,31 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBookings();
     });
 
+    // ---------- iCal export (share with Airbnb/Booking.com) ----------
+
+    const icalExportInput = document.getElementById('icalExportUrl');
+    const copyIcalExportBtn = document.getElementById('copyIcalExportBtn');
+
+    if (icalExportInput) {
+        icalExportInput.value = `${window.location.origin}/api/ical`;
+    }
+
+    if (copyIcalExportBtn) {
+        copyIcalExportBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(icalExportInput.value);
+            } catch {
+                // Clipboard API can fail without HTTPS/permissions; fall back
+                // to select-and-copy so the admin can still Ctrl/Cmd+C it.
+                icalExportInput.select();
+                document.execCommand('copy');
+            }
+            const original = copyIcalExportBtn.textContent;
+            copyIcalExportBtn.textContent = 'Copied!';
+            setTimeout(() => { copyIcalExportBtn.textContent = original; }, 2000);
+        });
+    }
+
     // ---------- iCal sync settings ----------
 
     const icalSettingsForm = document.getElementById('icalSettingsForm');
