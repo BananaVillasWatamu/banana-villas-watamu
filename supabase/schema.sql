@@ -134,6 +134,48 @@ revoke execute on function request_booking(date, date, text, text, text, int, in
 revoke execute on function request_booking(date, date, text, text, text, int, int, text) from authenticated;
 grant execute on function request_booking(date, date, text, text, text, int, int, text) to service_role;
 
+-- Enquiries ---------------------------------------------------------------
+-- Every submission of the public booking form lands here, whether or not it
+-- turned into a booking hold: dates already taken, rate-limited, or the guest
+-- jumping straight to WhatsApp with a half-filled form all still leave a
+-- lead the owner can follow up on. Bookings stay the source of truth for the
+-- calendar; this table is the enquiry log beside it.
+
+create type enquiry_channel as enum ('form', 'whatsapp');
+
+create table enquiries (
+  id uuid primary key default gen_random_uuid(),
+  guest_name text check (char_length(guest_name) <= 200),
+  email text check (char_length(email) <= 200),
+  phone text check (char_length(phone) <= 40),
+  checkin date,
+  checkout date,
+  adults int,
+  kids int,
+  notes text check (char_length(notes) <= 4000),
+  transfer boolean not null default false,
+  channel enquiry_channel not null default 'form',
+  -- 'requested' | 'unavailable' | 'rate_limited' | 'invalid' | 'error' |
+  -- 'whatsapp_only' — why the enquiry did or didn't become a hold.
+  outcome text check (char_length(outcome) <= 40),
+  booking_id uuid references bookings(id) on delete set null,
+  handled boolean not null default false,
+  created_ip text,
+  created_at timestamptz not null default now()
+);
+
+create index enquiries_created_at_idx on enquiries (created_at desc);
+
+alter table enquiries enable row level security;
+
+-- Same shape as bookings: no public policy at all. Guests never touch this
+-- table directly — /api/bookings and /api/enquiries write to it with the
+-- service-role key, which bypasses RLS.
+create policy "authenticated manage enquiries"
+  on enquiries for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
 -- Gallery ------------------------------------------------------------------
 
 create table gallery_images (
@@ -143,6 +185,9 @@ create table gallery_images (
   alt_text text not null default '',
   sort_order int not null default 0,
   visible boolean not null default true,
+  -- Picked out in the dashboard to appear in the header slider on the home
+  -- page. The site shows the first four of these, in sort_order.
+  hero_slide boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -157,6 +202,34 @@ create policy "authenticated manage gallery images"
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
+-- FAQs --------------------------------------------------------------------
+-- The questions that used to be hardcoded in the FAQ section of the site.
+-- seed.sql loads the original eight so nothing changes on the public page
+-- until the owner edits them from the dashboard.
+
+create table faqs (
+  id uuid primary key default gen_random_uuid(),
+  question text not null check (char_length(question) <= 300),
+  answer text not null check (char_length(answer) <= 4000),
+  sort_order int not null default 0,
+  published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index faqs_sort_order_idx on faqs (sort_order);
+
+alter table faqs enable row level security;
+
+create policy "public read published faqs"
+  on faqs for select
+  using (published = true);
+
+create policy "authenticated manage faqs"
+  on faqs for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
 -- SEO / site settings (singleton row) --------------------------------------
 
 create table site_settings (
@@ -168,6 +241,22 @@ create table site_settings (
   og_image_url text,
   airbnb_ical_url text,
   booking_ical_url text,
+  -- Business details rendered into the homepage as LodgingBusiness
+  -- structured data by /api/index.js — this is what Google reads for the
+  -- name, address, phone and map pin. All editable from the SEO tab.
+  business_name text default 'Banana Villas Watamu',
+  business_description text default 'Luxury 3-bedroom villa with oasis pool, beach access, and tropical surroundings in Watamu, Kenya.',
+  telephone text default '+254715257111',
+  email text default 'contact@bananavillaswatamu.com',
+  street_address text default 'Plot 442 Turtle Bay Road',
+  address_locality text default 'Watamu',
+  address_region text default 'Kilifi County',
+  address_country text default 'KE',
+  latitude numeric(9, 6) default -3.364829,
+  longitude numeric(9, 6) default 39.998538,
+  maps_url text default 'https://maps.app.goo.gl/CpwYLHs1epv3yJTHA',
+  number_of_rooms int default 3,
+  price_range text,
   updated_at timestamptz not null default now()
 );
 

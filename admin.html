@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin | Banana Villas Watamu</title>
+    <title>Staff Admin | Banana Villas Watamu</title>
     <meta name="robots" content="noindex, nofollow">
     <link rel="icon" href="images/banana-villas-watamu-logo.png" type="image/png">
     <link
@@ -20,7 +20,8 @@
     <div id="loginView" class="admin-login-wrap">
         <form id="loginForm" class="glass-card admin-login-card">
             <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo" class="admin-login-logo">
-            <h1>Admin Login</h1>
+            <h1>Staff Admin</h1>
+            <p class="admin-login-sub">Sign in to manage bookings, enquiries and content.</p>
             <div id="loginError" class="form-error-banner" style="display:none;"></div>
             <div class="form-group">
                 <label for="loginEmail">Email</label>
@@ -31,6 +32,7 @@
                 <input type="password" id="loginPassword" required autocomplete="current-password">
             </div>
             <button type="submit" class="btn-primary btn-full" id="loginBtn">Log In</button>
+            <a href="/" class="admin-back-link">&larr; Back to site</a>
         </form>
     </div>
 
@@ -39,12 +41,14 @@
         <aside class="admin-sidebar">
             <div class="admin-sidebar-brand">
                 <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo">
-                <span>Admin Dashboard</span>
+                <span>Staff Admin</span>
             </div>
             <nav class="admin-sidebar-nav">
                 <button class="admin-tab active" data-tab="home">Home</button>
                 <button class="admin-tab" data-tab="bookings">Bookings</button>
+                <button class="admin-tab" data-tab="enquiries">Enquiries<span id="enquiriesTabBadge" class="admin-tab-badge" hidden></span></button>
                 <button class="admin-tab" data-tab="reviews">Reviews</button>
+                <button class="admin-tab" data-tab="faqs">FAQs</button>
                 <button class="admin-tab" data-tab="gallery">Gallery</button>
                 <button class="admin-tab" data-tab="seo">SEO</button>
             </nav>
@@ -219,18 +223,34 @@
                     </form>
                 </div>
 
-                <!-- iCal export (share with Airbnb/Booking.com) -->
+                <!-- iCal export (share your calendar out to Airbnb/Booking.com) -->
                 <div class="admin-card">
-                    <h3>Your calendar link</h3>
-                    <p class="admin-hint">Share this link with Airbnb and Booking.com (paste it into their "import
-                        calendar" / "sync calendar" settings) so they block dates you've confirmed here. It only
-                        exposes booked date ranges — no guest names or contact details.</p>
+                    <h3>Share your calendar</h3>
+                    <p class="admin-hint">The other half of the sync: paste the matching link below into that
+                        platform's "import calendar" settings so it blocks the dates booked here. Each platform gets
+                        its own link that leaves out that platform's own reservations — sending Airbnb's bookings back
+                        to Airbnb would make it flag them as clashes with itself. The links only expose booked date
+                        ranges — no guest names or contact details.</p>
                     <div class="admin-inline-form">
                         <div class="form-group" style="flex:1;">
-                            <label for="icalExportUrl">Export URL</label>
-                            <input type="text" id="icalExportUrl" readonly>
+                            <label for="icalExportAirbnb">Link to give Airbnb</label>
+                            <input type="text" id="icalExportAirbnb" class="admin-ical-export" data-ical-audience="airbnb" readonly>
                         </div>
-                        <button type="button" id="copyIcalExportBtn" class="admin-btn-secondary">Copy link</button>
+                        <button type="button" class="admin-btn-secondary admin-copy-ical" data-target="icalExportAirbnb">Copy link</button>
+                    </div>
+                    <div class="admin-inline-form">
+                        <div class="form-group" style="flex:1;">
+                            <label for="icalExportBooking">Link to give Booking.com</label>
+                            <input type="text" id="icalExportBooking" class="admin-ical-export" data-ical-audience="booking_com" readonly>
+                        </div>
+                        <button type="button" class="admin-btn-secondary admin-copy-ical" data-target="icalExportBooking">Copy link</button>
+                    </div>
+                    <div class="admin-inline-form">
+                        <div class="form-group" style="flex:1;">
+                            <label for="icalExportAll">Link for any other calendar <span class="optional">(Google Calendar, phone, …)</span></label>
+                            <input type="text" id="icalExportAll" class="admin-ical-export" data-ical-audience="all" readonly>
+                        </div>
+                        <button type="button" class="admin-btn-secondary admin-copy-ical" data-target="icalExportAll">Copy link</button>
                     </div>
                 </div>
 
@@ -272,6 +292,45 @@
                             </tr>
                         </thead>
                         <tbody id="bookingsTableBody">
+                            <tr>
+                                <td colspan="9" class="admin-table-empty">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Enquiries -->
+            <section id="tab-enquiries" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>Enquiries</h2>
+                    <div class="admin-panel-actions">
+                        <label class="admin-check-inline">
+                            <input type="checkbox" id="enquiriesShowHandled"> Show handled
+                        </label>
+                        <span id="enquiriesCount" class="admin-sync-status"></span>
+                    </div>
+                </div>
+                <div id="enquiriesError" class="form-error-banner" style="display:none;"></div>
+                <p class="admin-hint">Everyone who filled in the booking form on the site — including guests who
+                    carried on to WhatsApp and those whose dates were already taken. Nothing here blocks the calendar
+                    on its own; use it to follow up on leads a booking never came out of.</p>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Received</th>
+                                <th>Guest</th>
+                                <th>Contact</th>
+                                <th>Dates</th>
+                                <th>Guests</th>
+                                <th>Via</th>
+                                <th>Outcome</th>
+                                <th>Message</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enquiriesTableBody">
                             <tr>
                                 <td colspan="9" class="admin-table-empty">Loading…</td>
                             </tr>
@@ -351,7 +410,60 @@
                 </div>
             </section>
 
+            <!-- FAQs -->
+            <section id="tab-faqs" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>FAQs</h2>
+                    <button id="addFaqBtn" class="admin-btn-secondary">+ Add question</button>
+                </div>
+                <div id="faqsError" class="form-error-banner" style="display:none;"></div>
+                <p class="admin-hint">These are the questions shown in the FAQ section of the site, in this order.
+                    Unpublished questions stay here but disappear from the public page.</p>
+
+                <form id="faqForm" class="admin-form" style="display:none;">
+                    <input type="hidden" id="faqId">
+                    <div class="form-group">
+                        <label for="faqQuestion">Question</label>
+                        <input type="text" id="faqQuestion" maxlength="300" required
+                            placeholder="e.g. Is there parking at the villa?">
+                    </div>
+                    <div class="form-group">
+                        <label for="faqAnswer">Answer</label>
+                        <textarea id="faqAnswer" rows="4" maxlength="4000" required
+                            placeholder="Leave a blank line between paragraphs."></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" id="faqPublished" checked>
+                        <label for="faqPublished">Published (visible on the public site)</label>
+                    </div>
+                    <div class="form-actions admin-form-actions">
+                        <button type="submit" class="btn-primary">Save question</button>
+                        <button type="button" id="cancelFaqBtn" class="admin-btn-secondary">Cancel</button>
+                    </div>
+                </form>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Question</th>
+                                <th>Answer</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="faqsTableBody">
+                            <tr>
+                                <td colspan="5" class="admin-table-empty">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Gallery -->
+
             <section id="tab-gallery" class="admin-panel">
                 <div class="admin-panel-header">
                     <h2>Gallery</h2>
@@ -361,6 +473,8 @@
                     </label>
                 </div>
                 <div id="galleryError" class="form-error-banner" style="display:none;"></div>
+                <p class="admin-hint">Tick <strong>Header slider</strong> on up to four photos to choose what rotates
+                    behind the title at the top of the site. <span id="heroSlideCount" class="admin-sync-status"></span></p>
                 <p id="galleryUploadStatus" class="admin-sync-status"></p>
                 <div id="galleryAdminGrid" class="admin-gallery-grid">
                     <p class="admin-table-empty">Loading…</p>
@@ -395,12 +509,87 @@
                         <textarea id="ogDescription" rows="2"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="ogImageUrl">Social share image URL <span class="optional">(optional — paste a
-                                gallery image URL)</span></label>
+                        <label for="ogImageUrl">Social share image</label>
+                        <p class="admin-hint">The picture that shows up when someone shares the site on WhatsApp,
+                            Facebook or X. Pick one from the gallery, or paste any image address below.</p>
+                        <div id="ogImagePicker" class="admin-og-picker">
+                            <p class="admin-table-empty">Loading photos…</p>
+                        </div>
                         <input type="url" id="ogImageUrl" placeholder="https://...">
                     </div>
+
+                    <h3 class="admin-form-heading">Business details for Google</h3>
+                    <p class="admin-hint">These fill the structured data on the homepage — the block search engines
+                        read for the name, address, phone number and map pin behind a listing. Anything left blank
+                        falls back to the site's built-in details.</p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="businessName">Business name</label>
+                            <input type="text" id="businessName" placeholder="Banana Villas Watamu">
+                        </div>
+                        <div class="form-group">
+                            <label for="businessPhone">Phone</label>
+                            <input type="tel" id="businessPhone" placeholder="+254715257111">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="businessDescription">Short description</label>
+                        <textarea id="businessDescription" rows="2"
+                            placeholder="Luxury 3-bedroom villa with oasis pool, beach access…"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="businessEmail">Email</label>
+                            <input type="email" id="businessEmail" placeholder="contact@bananavillaswatamu.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="businessPriceRange">Price range <span class="optional">(optional)</span></label>
+                            <input type="text" id="businessPriceRange" placeholder="e.g. KES 15,000 – 30,000">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="businessStreet">Street address</label>
+                        <input type="text" id="businessStreet" placeholder="Plot 442 Turtle Bay Road">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="businessLocality">Town</label>
+                            <input type="text" id="businessLocality" placeholder="Watamu">
+                        </div>
+                        <div class="form-group">
+                            <label for="businessRegion">County / region</label>
+                            <input type="text" id="businessRegion" placeholder="Kilifi County">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="businessCountry">Country code</label>
+                            <input type="text" id="businessCountry" maxlength="2" placeholder="KE">
+                        </div>
+                        <div class="form-group">
+                            <label for="businessRooms">Bedrooms</label>
+                            <input type="number" id="businessRooms" min="1" max="50" placeholder="3">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="businessMapsUrl">Google Maps link</label>
+                        <input type="url" id="businessMapsUrl" placeholder="https://maps.app.goo.gl/...">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="businessLatitude">Latitude</label>
+                            <input type="number" id="businessLatitude" step="0.000001" placeholder="-3.364829">
+                        </div>
+                        <div class="form-group">
+                            <label for="businessLongitude">Longitude</label>
+                            <input type="number" id="businessLongitude" step="0.000001" placeholder="39.998538">
+                        </div>
+                    </div>
+
                     <div class="form-actions">
                         <button type="submit" class="btn-primary">Save SEO settings</button>
+                        <span id="seoSaveStatus" class="admin-sync-status"></span>
                     </div>
                 </form>
             </section>

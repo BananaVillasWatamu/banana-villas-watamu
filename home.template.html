@@ -25,38 +25,9 @@
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lora:wght@400;600&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
-    <script type="application/ld+json">
-    {
-        "@context": "https://schema.org",
-        "@type": "LodgingBusiness",
-        "name": "Banana Villas Watamu",
-        "description": "Luxury 3-bedroom villa with oasis pool, beach access, and tropical surroundings in Watamu, Kenya.",
-        "url": "https://www.bananavillaswatamu.com",
-        "telephone": "+254715257111",
-        "email": "contact@bananavillaswatamu.com",
-        "address": {
-            "@type": "PostalAddress",
-            "addressLocality": "Watamu",
-            "addressRegion": "Kilifi County",
-            "addressCountry": "KE"
-        },
-        "numberOfRooms": 3,
-        "amenityFeature": [
-            {"@type": "LocationFeatureSpecification", "name": "Swimming Pool", "value": true},
-            {"@type": "LocationFeatureSpecification", "name": "WiFi", "value": true},
-            {"@type": "LocationFeatureSpecification", "name": "Air Conditioning", "value": true},
-            {"@type": "LocationFeatureSpecification", "name": "Kitchen", "value": true},
-            {"@type": "LocationFeatureSpecification", "name": "Parking", "value": true},
-            {"@type": "LocationFeatureSpecification", "name": "BBQ", "value": true}
-        ],
-        "image": "https://www.bananavillaswatamu.com/images/Banana%20Villas%20Watamu%20Photo%20-%20%20(1).jpg",
-        "geo": {
-            "@type": "GeoCoordinates",
-            "latitude": -3.3560,
-            "longitude": 40.0167
-        }
-    }
-    </script>
+    <!-- Business details for search engines, rendered from the site settings
+         by /api/index.js so they can be edited in the SEO tab. -->
+    <script type="application/ld+json">{{BUSINESS_SCHEMA}}</script>
 </head>
 
 <body>
@@ -81,6 +52,10 @@
     <main>
         <!-- Hero Section -->
         <section id="hero" class="hero">
+            <!-- Filled by loadHeroSlides() with the photos flagged for the
+                 slider in the dashboard. Empty here so the CSS background
+                 image stays the fallback if that never loads. -->
+            <div class="hero-slides" id="heroSlides" aria-hidden="true"></div>
             <div class="hero-content fade-up">
                 <h1>Banana Villas Watamu</h1>
                 <p class="tagline">Your Vacation Starts Here</p>
@@ -120,6 +95,7 @@
                 <div id="stripAvailabilityWarning" class="availability-note" style="display:none;"></div>
                 <a href="#contact" class="btn-primary hero-cta-mobile" id="heroCtaMobile">Check Availability</a>
             </div>
+            <div class="hero-dots" id="heroDots" role="tablist" aria-label="Header images"></div>
         </section>
 
         <!-- Gallery Section -->
@@ -354,10 +330,12 @@
                         </div>
                     </div>
                     <div class="location-map fade-left">
-                        <iframe src="https://maps.google.com/maps?q=Watamu,+Kenya&output=embed" width="100%"
-                            height="420" style="border:0;" allowfullscreen="" loading="lazy"
+                        <iframe src="https://maps.google.com/maps?q=Banana+Villas+Turtle+Bay,+Watamu&amp;ll=-3.3648289,39.9985382&amp;z=16&amp;output=embed"
+                            width="100%" height="420" style="border:0;" allowfullscreen="" loading="lazy"
                             referrerpolicy="no-referrer-when-downgrade" title="Banana Villas Watamu Location">
                         </iframe>
+                        <a href="https://maps.app.goo.gl/CpwYLHs1epv3yJTHA" class="btn-platform location-map-link" target="_blank"
+                            rel="noopener noreferrer"><i data-lucide="map-pin"></i> Open in Google Maps</a>
                     </div>
                 </div>
             </div>
@@ -370,7 +348,7 @@
                     <h2>Frequently Asked Questions</h2>
                     <p>Everything you need to know before you book.</p>
                 </div>
-                <div class="faq-list fade-up">
+                <div class="faq-list fade-up" id="faqList">
                     <div class="faq-item">
                         <button class="faq-question" aria-expanded="false">What is the minimum stay? <span
                                 class="faq-icon">+</span></button>
@@ -451,7 +429,7 @@
                         <div class="contact-details">
                             <div class="contact-detail">
                                 <span class="icon"><i data-lucide="map-pin"></i></span>
-                                <span>Watamu, Kenya</span>
+                                <a href="https://maps.app.goo.gl/CpwYLHs1epv3yJTHA" target="_blank" rel="noopener noreferrer">Turtle Bay, Watamu, Kenya</a>
                             </div>
                             <div class="contact-detail">
                                 <span class="icon"><i data-lucide="phone"></i></span>
@@ -521,8 +499,11 @@
                             <label for="contactTransfer">I'd like airport transfer / pickup service</label>
                         </div>
                         <div class="form-actions">
-                            <button type="button" id="btnContactFormWhatsapp"
-                                class="btn-primary btn-whatsapp btn-full">Request via WhatsApp</button>
+                            <button type="button" id="btnContactFormSubmit"
+                                class="btn-primary btn-full btn-cta">Confirm Booking <span aria-hidden="true">&rarr;</span></button>
+                            <p class="form-actions-alt">Or message us directly on
+                                <button type="button" id="btnContactFormWhatsapp" class="link-whatsapp">WhatsApp</button>
+                            </p>
                         </div>
                     </form>
                 </div>
@@ -558,8 +539,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-brand">
-                    <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo"
-                        style="height: 50px; margin-bottom: 0.5rem; background-color: rgba(255,255,255,0.9); padding: 5px; border-radius: 4px;">
+                    <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo" class="footer-logo">
                     <p>Your Vacation Starts Here</p>
                 </div>
                 <div class="footer-links">
@@ -570,10 +550,14 @@
                     <a href="#faq">FAQ</a>
                     <a href="#contact">Contact</a>
                 </div>
+                <!-- Kept out of the bottom-right corner: the floating WhatsApp
+                     button is fixed there and would sit on top of it. -->
+                <a href="admin.html" target="_blank" rel="noopener noreferrer nofollow" class="footer-admin-link">
+                    <i data-lucide="lock"></i> Staff Admin
+                </a>
             </div>
             <div class="footer-bottom">
                 <p>&copy; 2026 Banana Villas Watamu. All rights reserved.</p>
-                <a href="admin.html" target="_blank" rel="noopener noreferrer nofollow" class="footer-admin-link">Admin</a>
             </div>
         </div>
     </footer>

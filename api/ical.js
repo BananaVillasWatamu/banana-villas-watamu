@@ -9,11 +9,36 @@ function toICSDate(dateStr) {
   return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}`;
 }
 
+// Which platform this feed is being shared with. Each platform gets its own
+// link so we can leave out the bookings that came from that platform in the
+// first place: sending Airbnb's own reservations back to Airbnb makes it
+// flag them as double-bookings against itself. `all` (the default) is the
+// full feed, for Google Calendar or anything else.
+const AUDIENCES = {
+  airbnb: { excludeSource: 'airbnb', name: 'Banana Villas Watamu (for Airbnb)' },
+  booking_com: { excludeSource: 'booking_com', name: 'Banana Villas Watamu (for Booking.com)' },
+  all: { excludeSource: null, name: 'Banana Villas Watamu' },
+};
+
+function resolveAudience(req) {
+  // req.query is populated by Vercel's node runtime; the URL fallback keeps
+  // this working anywhere the handler is mounted directly.
+  let value = req.query?.for;
+  if (value === undefined) {
+    value = new URL(req.url, 'http://localhost').searchParams.get('for');
+  }
+  const raw = String(value || '').toLowerCase().replace(/[.-]/g, '_');
+  if (raw === 'airbnb') return AUDIENCES.airbnb;
+  if (raw === 'booking_com' || raw === 'booking' || raw === 'bookingcom') return AUDIENCES.booking_com;
+  return AUDIENCES.all;
+}
+
 module.exports = async (req, res) => {
+  const audience = resolveAudience(req);
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('bookings')
-    .select('id, checkin, checkout, status, hold_expires_at')
+    .select('id, checkin, checkout, status, source, hold_expires_at')
     .in('status', ['confirmed', 'pending']);
 
   if (error) {
@@ -25,8 +50,9 @@ module.exports = async (req, res) => {
   const now = new Date();
   const blocking = (data || []).filter(
     (b) =>
-      b.status === 'confirmed' ||
-      (b.status === 'pending' && b.hold_expires_at && new Date(b.hold_expires_at) > now)
+      (b.status === 'confirmed' ||
+        (b.status === 'pending' && b.hold_expires_at && new Date(b.hold_expires_at) > now)) &&
+      b.source !== audience.excludeSource
   );
 
   const stamp = `${toICSDate(now.toISOString().slice(0, 10))}T000000Z`;
@@ -35,6 +61,7 @@ module.exports = async (req, res) => {
     'VERSION:2.0',
     'PRODID:-//Banana Villas Watamu//Booking Calendar//EN',
     'CALSCALE:GREGORIAN',
+    `X-WR-CALNAME:${audience.name}`,
   ];
 
   for (const b of blocking) {

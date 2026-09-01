@@ -430,81 +430,174 @@ document.addEventListener('DOMContentLoaded', () => {
     if (heroAdults && heroKids) enforceMaxGuests(heroAdults, heroKids);
     if (contactAdults && contactKids) enforceMaxGuests(contactAdults, contactKids);
 
-    // Contact Form WhatsApp Logic (booking request)
-    // Saves the request to the backend first (which enforces the 48h hold /
-    // double-booking check) and only opens WhatsApp once the save succeeds.
-    const btnContactFormWhatsapp = document.getElementById('btnContactFormWhatsapp');
-    if (btnContactFormWhatsapp) {
-        btnContactFormWhatsapp.addEventListener('click', async () => {
-            const checkin = document.getElementById('contactCheckin').value;
-            const checkout = document.getElementById('contactCheckout').value;
-            const adults = document.getElementById('contactAdults').value;
-            const kids = document.getElementById('contactKids').value;
-            const name = document.getElementById('contactName').value;
-            const email = document.getElementById('contactEmail').value;
-            const phone = document.getElementById('contactPhone').value;
-            const transfer = document.getElementById('contactTransfer').checked;
-            const notes = document.getElementById('contactMessage').value;
+    // Contact form (booking request)
+    //
+    // Two ways out of this form, and both leave the guest's details with us:
+    // "Confirm Booking" saves the request (which enforces the 48h hold and
+    // the double-booking check), while the WhatsApp link opens the chat
+    // immediately and logs the enquiry in the background — so a half-filled
+    // form, or dates that turn out to be taken, still reach the owner
+    // instead of disappearing into a chat we never see.
+    const WHATSAPP_NUMBER = '254715257111';
 
+    const readContactForm = () => ({
+        checkin: document.getElementById('contactCheckin').value,
+        checkout: document.getElementById('contactCheckout').value,
+        adults: document.getElementById('contactAdults').value,
+        kids: document.getElementById('contactKids').value,
+        name: document.getElementById('contactName').value,
+        email: document.getElementById('contactEmail').value,
+        phone: document.getElementById('contactPhone').value,
+        transfer: document.getElementById('contactTransfer').checked,
+        notes: document.getElementById('contactMessage').value,
+    });
+
+    // Returns an error message, or null when the form is complete enough to
+    // ask for a hold.
+    const validateContactForm = (f) => {
+        if (!f.name || !f.phone || !f.checkin || !f.checkout) {
+            return 'Please fill in your Name, Phone Number, Check-in, and Check-out dates.';
+        }
+        if (new Date(f.checkout) <= new Date(f.checkin)) {
+            return 'Check-out date must be after your Check-in date.';
+        }
+        return null;
+    };
+
+    const buildWhatsappUrl = (f) => {
+        const lines = [
+            'Hello Banana Villas Watamu! I would like to request a booking.',
+            '',
+            `*Name:* ${f.name || 'N/A'}`,
+            `*Email:* ${f.email || 'N/A'}`,
+            `*Phone:* ${f.phone || 'N/A'}`,
+            `*Check-in:* ${f.checkin || 'N/A'}`,
+            `*Check-out:* ${f.checkout || 'N/A'}`,
+            `*Guests:* ${f.adults || 0} Adults, ${f.kids || 0} Kids`,
+            `*Airport transfer:* ${f.transfer ? 'Yes, please' : 'Not needed'}`,
+        ];
+        if (f.notes) lines.push(`*Message:* ${f.notes}`);
+        lines.push('', 'Please let me know about availability!');
+        return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
+    };
+
+    const bookingErrorMessage = (result) => {
+        switch (result.error) {
+            case 'unavailable':
+                return 'Sorry, those dates just became unavailable. Please choose different dates.';
+            case 'too_many_guests':
+                return `We can take a maximum of ${MAX_GUESTS} guests per booking. Please adjust your guest count.`;
+            case 'invalid_email':
+                return "That email address doesn't look right — please double-check it.";
+            case 'invalid_phone':
+                return "That phone number doesn't look right — please double-check it.";
+            case 'invalid_dates':
+                return 'Please choose valid check-in/check-out dates (not in the past, within the next 2 years).';
+            case 'rate_limited':
+                return "You've submitted a few requests already — please wait a bit before trying again, or message us on WhatsApp directly.";
+            default:
+                return "Couldn't save your request right now. Please try again, or message us directly on WhatsApp.";
+        }
+    };
+
+    // channel records how the guest chose to reach us, so the owner can see
+    // in the dashboard which enquiries are still waiting in WhatsApp.
+    const postBookingRequest = (f, channel, keepalive = false) =>
+        fetch('/api/bookings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            keepalive,
+            body: JSON.stringify({
+                checkin: f.checkin,
+                checkout: f.checkout,
+                name: f.name,
+                email: f.email,
+                phone: f.phone,
+                adults: f.adults,
+                kids: f.kids,
+                notes: f.notes,
+                transfer: f.transfer,
+                channel,
+            }),
+        });
+
+    const btnContactFormSubmit = document.getElementById('btnContactFormSubmit');
+    if (btnContactFormSubmit) {
+        btnContactFormSubmit.addEventListener('click', async () => {
+            const fields = readContactForm();
             hideFormMessage('contactFormSuccess');
 
-            if (!name || !phone || !checkin || !checkout) {
-                showFormError('contactFormError', 'Please fill in your Name, Phone Number, Check-in, and Check-out dates.');
+            const validationError = validateContactForm(fields);
+            if (validationError) {
+                showFormError('contactFormError', validationError);
                 return;
             }
 
-            if (new Date(checkout) <= new Date(checkin)) {
-                showFormError('contactFormError', 'Check-out date must be after your Check-in date.');
-                return;
-            }
-
-            const originalLabel = btnContactFormWhatsapp.textContent;
-            btnContactFormWhatsapp.disabled = true;
-            btnContactFormWhatsapp.textContent = 'Checking availability...';
+            const originalLabel = btnContactFormSubmit.innerHTML;
+            btnContactFormSubmit.disabled = true;
+            btnContactFormSubmit.textContent = 'Checking availability...';
 
             try {
-                const response = await fetch('/api/bookings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ checkin, checkout, name, email, phone, adults, kids, notes }),
-                });
+                const response = await postBookingRequest(fields, 'form');
                 const result = await response.json().catch(() => ({ ok: false }));
 
                 if (!response.ok || !result.ok) {
-                    if (result.error === 'unavailable') {
-                        showFormError('contactFormError', 'Sorry, those dates just became unavailable. Please choose different dates.');
-                    } else if (result.error === 'too_many_guests') {
-                        showFormError('contactFormError', `We can take a maximum of ${MAX_GUESTS} guests per booking. Please adjust your guest count.`);
-                    } else if (result.error === 'invalid_email') {
-                        showFormError('contactFormError', 'That email address doesn\'t look right — please double-check it.');
-                    } else if (result.error === 'invalid_phone') {
-                        showFormError('contactFormError', 'That phone number doesn\'t look right — please double-check it.');
-                    } else if (result.error === 'invalid_dates') {
-                        showFormError('contactFormError', 'Please choose valid check-in/check-out dates (not in the past, within the next 2 years).');
-                    } else if (result.error === 'rate_limited') {
-                        showFormError('contactFormError', "You've submitted a few requests already — please wait a bit before trying again, or message us on WhatsApp directly.");
-                    } else {
-                        showFormError('contactFormError', "Couldn't save your request right now. Please try again, or message us directly on WhatsApp.");
-                    }
+                    showFormError('contactFormError', bookingErrorMessage(result));
                     return;
                 }
 
-                showFormSuccess('contactFormSuccess', "Your request has been saved! Opening WhatsApp so you can send it to us directly — we'll confirm availability shortly.");
-
-                const whatsappNumber = "254715257111";
-                const message = encodeURIComponent(
-                    `Hello Banana Villas Watamu! I would like to request a booking.\n\n*Name:* ${name}\n*Email:* ${email ? email : 'N/A'}\n*Phone:* ${phone}\n*Check-in:* ${checkin}\n*Check-out:* ${checkout}\n*Guests:* ${adults} Adults, ${kids} Kids\n*Airport transfer:* ${transfer ? 'Yes, please' : 'Not needed'}${notes ? `\n*Message:* ${notes}` : ''}\n\nPlease let me know about availability!`
-                );
-                const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
-
-                window.open(whatsappUrl, '_blank');
+                showFormSuccess('contactFormSuccess', "Your request is in! We're holding these dates for you and will confirm shortly — send it over on WhatsApp too if you'd like a faster reply.");
             } catch (err) {
                 console.error('booking request failed', err);
                 showFormError('contactFormError', "Couldn't save your request right now. Please try again, or message us directly on WhatsApp.");
             } finally {
-                btnContactFormWhatsapp.disabled = false;
-                btnContactFormWhatsapp.textContent = originalLabel;
+                btnContactFormSubmit.disabled = false;
+                btnContactFormSubmit.innerHTML = originalLabel;
             }
+        });
+    }
+
+    const btnContactFormWhatsapp = document.getElementById('btnContactFormWhatsapp');
+    if (btnContactFormWhatsapp) {
+        btnContactFormWhatsapp.addEventListener('click', () => {
+            const fields = readContactForm();
+            hideFormMessage('contactFormSuccess');
+
+            // Opened synchronously, before any await, so the browser still
+            // counts it as part of the click and doesn't block the popup.
+            // Nothing about saving the enquiry should stand between the guest
+            // and the chat.
+            window.open(buildWhatsappUrl(fields), '_blank');
+
+            // A complete form can still take the 48h hold; anything less is
+            // logged as a plain enquiry so the lead isn't lost either way.
+            // keepalive keeps the request going once the tab is backgrounded
+            // on the way to WhatsApp.
+            const isComplete = validateContactForm(fields) === null;
+            const request = isComplete
+                ? postBookingRequest(fields, 'whatsapp', true)
+                : fetch('/api/enquiries', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      keepalive: true,
+                      body: JSON.stringify({ ...fields, channel: 'whatsapp', outcome: 'whatsapp_only' }),
+                  });
+
+            request
+                .then(async (response) => {
+                    if (!isComplete) return;
+                    const result = await response.json().catch(() => ({ ok: false }));
+                    if (result.ok) {
+                        showFormSuccess('contactFormSuccess', "Sent to WhatsApp — and we're holding these dates for you while we confirm.");
+                    } else if (result.error === 'unavailable') {
+                        showFormError('contactFormError', "We've got your enquiry, but those dates look taken — mention alternative dates in your message and we'll find you a spot.");
+                    } else {
+                        showFormError('contactFormError', bookingErrorMessage(result));
+                    }
+                })
+                .catch((err) => {
+                    console.error('enquiry capture failed', err);
+                });
         });
     }
 
@@ -592,13 +685,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 
-    // FAQ Accordion
-    document.querySelectorAll('.faq-question').forEach(btn => {
-        btn.addEventListener('click', () => {
+    // FAQ Accordion — delegated, so it keeps working after loadFaqs()
+    // swaps the list out for the questions stored in Supabase.
+    const faqList = document.getElementById('faqList');
+    if (faqList) {
+        faqList.addEventListener('click', (e) => {
+            const btn = e.target.closest('.faq-question');
+            if (!btn) return;
+
             const answer = btn.nextElementSibling;
             const isOpen = btn.getAttribute('aria-expanded') === 'true';
 
-            document.querySelectorAll('.faq-question').forEach(b => {
+            faqList.querySelectorAll('.faq-question').forEach(b => {
                 b.setAttribute('aria-expanded', 'false');
                 b.nextElementSibling.classList.remove('open');
             });
@@ -608,7 +706,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 answer.classList.add('open');
             }
         });
-    });
+    }
 
     // Sticky WhatsApp float button
     const whatsappFloat = document.querySelector('.whatsapp-float');
@@ -666,6 +764,130 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
         } catch (err) {
             console.error('failed to load reviews', err);
+        }
+    };
+
+    // Header slider — the photos flagged for it in the dashboard, crossfading
+    // behind the hero content. Falls back to the CSS background image on the
+    // .hero section if nothing is flagged or Supabase can't be reached.
+    const HERO_SLIDE_COUNT = 4;
+    const HERO_SLIDE_MS = 6000;
+
+    const loadHeroSlides = async () => {
+        if (typeof sbClient === 'undefined') return;
+
+        const stage = document.getElementById('heroSlides');
+        const dotsWrap = document.getElementById('heroDots');
+        if (!stage) return;
+
+        let images = [];
+        try {
+            const { data, error } = await sbClient
+                .from('gallery_images')
+                .select('public_url, alt_text')
+                .eq('visible', true)
+                .eq('hero_slide', true)
+                .order('sort_order', { ascending: true })
+                .limit(HERO_SLIDE_COUNT);
+
+            if (error || !data || data.length === 0) return;
+            images = data;
+        } catch (err) {
+            console.error('failed to load header slides', err);
+            return;
+        }
+
+        stage.innerHTML = images.map((img, i) => `
+            <div class="hero-slide${i === 0 ? ' active' : ''}" role="img"
+                 aria-label="${escapeHtml(img.alt_text || 'Banana Villas Watamu')}"
+                 style="background-image: url('${encodeURI(img.public_url)}');"></div>`).join('');
+
+        const slides = [...stage.querySelectorAll('.hero-slide')];
+        if (dotsWrap) {
+            dotsWrap.innerHTML = slides.map((_, i) => `
+                <button type="button" class="hero-dot${i === 0 ? ' active' : ''}" data-index="${i}"
+                        aria-label="Show header image ${i + 1}"></button>`).join('');
+        }
+
+        // A single image needs no rotation, dots or timer.
+        if (slides.length < 2) {
+            if (dotsWrap) dotsWrap.innerHTML = '';
+            return;
+        }
+
+        let current = 0;
+        let timer = null;
+
+        const show = (index) => {
+            current = (index + slides.length) % slides.length;
+            slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+            if (dotsWrap) {
+                dotsWrap.querySelectorAll('.hero-dot').forEach((dot, i) => dot.classList.toggle('active', i === current));
+            }
+        };
+
+        const stop = () => {
+            if (timer) clearInterval(timer);
+            timer = null;
+        };
+
+        const start = () => {
+            stop();
+            // Auto-advance is motion the guest didn't ask for; leave it off
+            // when they've said they'd rather not have any.
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+            timer = setInterval(() => show(current + 1), HERO_SLIDE_MS);
+        };
+
+        if (dotsWrap) {
+            dotsWrap.addEventListener('click', (e) => {
+                const dot = e.target.closest('.hero-dot');
+                if (!dot) return;
+                show(parseInt(dot.dataset.index, 10) || 0);
+                start();
+            });
+        }
+
+        // No point animating a hero nobody is looking at.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) stop();
+            else start();
+        });
+
+        start();
+    };
+
+    // FAQs — loaded from Supabase, replacing the hardcoded questions. As
+    // with reviews, the markup already in the HTML stays as the fallback if
+    // the fetch fails or nothing is published.
+    const loadFaqs = async () => {
+        if (typeof sbClient === 'undefined') return;
+        try {
+            const { data, error } = await sbClient
+                .from('faqs')
+                .select('question, answer')
+                .eq('published', true)
+                .order('sort_order', { ascending: true });
+
+            if (error || !data || data.length === 0) return;
+
+            const list = document.getElementById('faqList');
+            if (!list) return;
+
+            list.innerHTML = data.map((f) => {
+                const paragraphs = escapeHtml(f.answer)
+                    .split(/\n\s*\n/)
+                    .map((para) => `<p>${para.replace(/\n/g, '<br>')}</p>`)
+                    .join('');
+                return `
+                    <div class="faq-item">
+                        <button class="faq-question" aria-expanded="false">${escapeHtml(f.question)} <span
+                                class="faq-icon">+</span></button>
+                        <div class="faq-answer">${paragraphs}</div>
+                    </div>`;
+            }).join('');
+        } catch (err) {
+            console.error('failed to load faqs', err);
         }
     };
 
@@ -767,7 +989,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    loadHeroSlides();
     loadReviews();
+    loadFaqs();
     loadGallery();
 
     // Populates blockedRanges (declared up with the availability helpers

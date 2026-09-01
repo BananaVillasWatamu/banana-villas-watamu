@@ -1,4 +1,5 @@
 const { getSupabaseAdmin } = require('./_lib/supabaseAdmin');
+const { recordEnquiry, getClientIp } = require('./_lib/enquiries');
 
 const MAX_GUESTS = 10;
 const MAX_NAME_LEN = 200;
@@ -17,12 +18,6 @@ const PHONE_RE = /^[0-9+\-\s()]{6,40}$/;
 const RATE_LIMIT_WINDOW_HOURS = 1;
 const RATE_LIMIT_MAX_REQUESTS = 5;
 
-function getClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.socket?.remoteAddress || null;
-}
-
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ ok: false, error: 'method_not_allowed' });
@@ -39,6 +34,18 @@ module.exports = async (req, res) => {
   }
   body = body || {};
 
+  const supabase = getSupabaseAdmin();
+  const clientIp = getClientIp(req);
+
+  // Every submission that reaches this endpoint is logged as an enquiry,
+  // whatever happens to it — a guest whose dates are already taken is still
+  // a lead worth following up, and they often continue the conversation on
+  // WhatsApp regardless of what this endpoint answers.
+  const reject = async (status, error, outcome) => {
+    await recordEnquiry(supabase, { body, outcome, ip: clientIp });
+    res.status(status).json({ ok: false, error });
+  };
+
   const checkin = typeof body.checkin === 'string' ? body.checkin : '';
   const checkout = typeof body.checkout === 'string' ? body.checkout : '';
   const name = typeof body.name === 'string' ? body.name.trim() : '';
@@ -49,7 +56,7 @@ module.exports = async (req, res) => {
   const kids = body.kids ? parseInt(body.kids, 10) : null;
 
   if (!checkin || !checkout || !name || !phone) {
-    res.status(400).json({ ok: false, error: 'missing_fields' });
+    await reject(400, 'missing_fields', 'invalid');
     return;
   }
 
@@ -59,17 +66,17 @@ module.exports = async (req, res) => {
     phone.length > MAX_PHONE_LEN ||
     notes.length > MAX_NOTES_LEN
   ) {
-    res.status(400).json({ ok: false, error: 'field_too_long' });
+    await reject(400, 'field_too_long', 'invalid');
     return;
   }
 
   if (email && !EMAIL_RE.test(email)) {
-    res.status(400).json({ ok: false, error: 'invalid_email' });
+    await reject(400, 'invalid_email', 'invalid');
     return;
   }
 
   if (!PHONE_RE.test(phone)) {
-    res.status(400).json({ ok: false, error: 'invalid_phone' });
+    await reject(400, 'invalid_phone', 'invalid');
     return;
   }
 
@@ -87,17 +94,14 @@ module.exports = async (req, res) => {
     checkinDate < today ||
     checkinDate > maxDate
   ) {
-    res.status(400).json({ ok: false, error: 'invalid_dates' });
+    await reject(400, 'invalid_dates', 'invalid');
     return;
   }
 
   if ((adults || 0) + (kids || 0) > MAX_GUESTS) {
-    res.status(400).json({ ok: false, error: 'too_many_guests' });
+    await reject(400, 'too_many_guests', 'invalid');
     return;
   }
-
-  const supabase = getSupabaseAdmin();
-  const clientIp = getClientIp(req);
 
   if (clientIp) {
     const since = new Date(Date.now() - RATE_LIMIT_WINDOW_HOURS * 3600000).toISOString();
@@ -108,7 +112,7 @@ module.exports = async (req, res) => {
       .gte('created_at', since);
 
     if (!rateError && count !== null && count >= RATE_LIMIT_MAX_REQUESTS) {
-      res.status(429).json({ ok: false, error: 'rate_limited' });
+      await reject(429, 'rate_limited', 'rate_limited');
       return;
     }
   }
@@ -126,9 +130,16 @@ module.exports = async (req, res) => {
 
   if (error) {
     console.error('request_booking error', error);
-    res.status(500).json({ ok: false, error: 'server_error' });
+    await reject(500, 'server_error', 'error');
     return;
   }
+
+  await recordEnquiry(supabase, {
+    body,
+    outcome: data?.ok ? 'requested' : 'unavailable',
+    bookingId: data?.ok ? data.id || null : null,
+    ip: clientIp,
+  });
 
   if (data?.ok && data.id && clientIp) {
     // Tag the row for the rate-limit check above. Awaited (not

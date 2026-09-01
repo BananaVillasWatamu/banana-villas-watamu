@@ -29,7 +29,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loginView.style.display = 'none';
         dashboardView.style.display = 'flex';
         loadBookings();
+        loadEnquiries();
         loadReviews();
+        loadFaqs();
         loadGallery();
         loadSeoSettings();
         loadIcalSettings();
@@ -599,30 +601,35 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBookings();
     });
 
-    // ---------- iCal export (share with Airbnb/Booking.com) ----------
+    // ---------- iCal export (share our calendar out) ----------
 
-    const icalExportInput = document.getElementById('icalExportUrl');
-    const copyIcalExportBtn = document.getElementById('copyIcalExportBtn');
+    // One link per platform: /api/ical?for=airbnb leaves Airbnb's own
+    // reservations out of the feed Airbnb reads back, and likewise for
+    // Booking.com. The 'all' link is the unfiltered feed.
+    document.querySelectorAll('.admin-ical-export').forEach((input) => {
+        const audience = input.dataset.icalAudience;
+        input.value = audience && audience !== 'all'
+            ? `${window.location.origin}/api/ical?for=${audience}`
+            : `${window.location.origin}/api/ical`;
+    });
 
-    if (icalExportInput) {
-        icalExportInput.value = `${window.location.origin}/api/ical`;
-    }
-
-    if (copyIcalExportBtn) {
-        copyIcalExportBtn.addEventListener('click', async () => {
+    document.querySelectorAll('.admin-copy-ical').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const input = document.getElementById(btn.dataset.target);
+            if (!input) return;
             try {
-                await navigator.clipboard.writeText(icalExportInput.value);
+                await navigator.clipboard.writeText(input.value);
             } catch {
                 // Clipboard API can fail without HTTPS/permissions; fall back
                 // to select-and-copy so the admin can still Ctrl/Cmd+C it.
-                icalExportInput.select();
+                input.select();
                 document.execCommand('copy');
             }
-            const original = copyIcalExportBtn.textContent;
-            copyIcalExportBtn.textContent = 'Copied!';
-            setTimeout(() => { copyIcalExportBtn.textContent = original; }, 2000);
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = original; }, 2000);
         });
-    }
+    });
 
     // ---------- iCal sync settings ----------
 
@@ -657,6 +664,147 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         syncStatus.textContent = 'Calendar links saved.';
+    });
+
+    // ---------- Enquiries ----------
+
+    // Leads from the public booking form. Unlike bookings, a row here never
+    // affects the calendar — it's the record of someone asking, including the
+    // ones that never became a hold (dates taken, form half-filled, guest
+    // carried on to WhatsApp).
+
+    const enquiriesTableBody = document.getElementById('enquiriesTableBody');
+    const enquiriesShowHandled = document.getElementById('enquiriesShowHandled');
+    const enquiriesCount = document.getElementById('enquiriesCount');
+    const enquiriesTabBadge = document.getElementById('enquiriesTabBadge');
+
+    let enquiriesCache = [];
+
+    const OUTCOME_LABELS = {
+        requested: 'Hold created',
+        unavailable: 'Dates taken',
+        rate_limited: 'Too many tries',
+        invalid: 'Form incomplete',
+        error: 'Save failed',
+        whatsapp_only: 'Went to WhatsApp',
+    };
+
+    const formatEnquiryTime = (iso) => {
+        if (!iso) return '—';
+        const d = new Date(iso);
+        return `${d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}, ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+    };
+
+    // wa.me needs a bare international number — strip spaces, dashes and the
+    // leading +, and treat a local 07… Kenyan number as +254.
+    const waLink = (phone) => {
+        const digits = String(phone || '').replace(/[^\d]/g, '');
+        if (!digits) return null;
+        const normalised = digits.startsWith('0') ? `254${digits.slice(1)}` : digits;
+        return `https://wa.me/${normalised}`;
+    };
+
+    function renderEnquiries() {
+        const showHandled = enquiriesShowHandled?.checked;
+        const rows = enquiriesCache.filter((e) => showHandled || !e.handled);
+        const openCount = enquiriesCache.filter((e) => !e.handled).length;
+
+        if (enquiriesCount) {
+            enquiriesCount.textContent = `${openCount} to follow up${enquiriesCache.length ? ` · ${enquiriesCache.length} total` : ''}`;
+        }
+        if (enquiriesTabBadge) {
+            enquiriesTabBadge.textContent = openCount;
+            enquiriesTabBadge.hidden = openCount === 0;
+        }
+
+        if (rows.length === 0) {
+            enquiriesTableBody.innerHTML = `<tr><td colspan="9" class="admin-table-empty">${
+                enquiriesCache.length === 0
+                    ? 'No enquiries yet. Anything sent through the booking form on the site shows up here.'
+                    : 'Nothing left to follow up — tick "Show handled" to see the ones you\'ve dealt with.'
+            }</td></tr>`;
+            return;
+        }
+
+        enquiriesTableBody.innerHTML = rows.map((e) => {
+            const dates = e.checkin && e.checkout
+                ? `${e.checkin} → ${e.checkout}`
+                : escapeHtml(e.checkin || e.checkout || '—');
+            const guests = (e.adults || e.kids) ? `${e.adults || 0}A / ${e.kids || 0}K` : '—';
+            const contactBits = [];
+            if (e.phone) contactBits.push(escapeHtml(e.phone));
+            if (e.email) contactBits.push(escapeHtml(e.email));
+            const contact = contactBits.join('<br>') || '—';
+            const outcome = OUTCOME_LABELS[e.outcome] || escapeHtml(e.outcome || '—');
+            const note = [e.notes, e.transfer ? 'Wants airport transfer' : null]
+                .filter(Boolean)
+                .map(escapeHtml)
+                .join('<br>') || '—';
+            const wa = waLink(e.phone);
+
+            return `
+                <tr class="${e.handled ? 'admin-row-handled' : ''}">
+                    <td>${formatEnquiryTime(e.created_at)}</td>
+                    <td>${escapeHtml(e.guest_name || '—')}</td>
+                    <td>${contact}</td>
+                    <td>${dates}</td>
+                    <td>${guests}</td>
+                    <td><span class="admin-status-pill admin-status-${e.channel === 'whatsapp' ? 'whatsapp' : 'formchannel'}">${e.channel === 'whatsapp' ? 'WhatsApp' : 'Form'}</span></td>
+                    <td>${outcome}</td>
+                    <td class="admin-enquiry-note">${note}</td>
+                    <td>
+                        <div class="admin-row-actions">
+                            ${wa ? `<a class="admin-btn-edit" href="${wa}" target="_blank" rel="noopener noreferrer">Reply</a>` : ''}
+                            <button class="admin-btn-confirm" data-action="${e.handled ? 'reopen' : 'handle'}" data-id="${e.id}">${e.handled ? 'Reopen' : 'Mark handled'}</button>
+                            <button class="admin-btn-delete" data-action="delete-enquiry" data-id="${e.id}">Delete</button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    async function loadEnquiries() {
+        hideError('enquiriesError');
+        const { data, error } = await sbClient
+            .from('enquiries')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(300);
+
+        if (error) {
+            showError('enquiriesError', 'Failed to load enquiries.');
+            return;
+        }
+
+        enquiriesCache = data || [];
+        renderEnquiries();
+    }
+
+    if (enquiriesShowHandled) {
+        enquiriesShowHandled.addEventListener('change', renderEnquiries);
+    }
+
+    enquiriesTableBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        hideError('enquiriesError');
+
+        if (btn.dataset.action === 'delete-enquiry') {
+            if (!confirm('Delete this enquiry? This only removes the record of the enquiry — any booking made from it stays.')) {
+                btn.disabled = false;
+                return;
+            }
+            const { error } = await sbClient.from('enquiries').delete().eq('id', id);
+            if (error) showError('enquiriesError', 'Failed to delete that enquiry.');
+        } else {
+            const handled = btn.dataset.action === 'handle';
+            const { error } = await sbClient.from('enquiries').update({ handled }).eq('id', id);
+            if (error) showError('enquiriesError', 'Failed to update that enquiry.');
+        }
+
+        loadEnquiries();
     });
 
     // ---------- Reviews ----------
@@ -773,12 +921,183 @@ document.addEventListener('DOMContentLoaded', () => {
         loadReviews();
     });
 
+    // ---------- FAQs ----------
+
+    // The questions in the FAQ section of the public site. sort_order is what
+    // the site orders by, so the up/down buttons here just swap two rows'
+    // sort_order values.
+
+    const faqsTableBody = document.getElementById('faqsTableBody');
+    const faqForm = document.getElementById('faqForm');
+    const addFaqBtn = document.getElementById('addFaqBtn');
+    const cancelFaqBtn = document.getElementById('cancelFaqBtn');
+
+    let faqsCache = [];
+
+    const resetFaqForm = () => {
+        faqForm.reset();
+        document.getElementById('faqId').value = '';
+        document.getElementById('faqPublished').checked = true;
+    };
+
+    addFaqBtn.addEventListener('click', () => {
+        resetFaqForm();
+        faqForm.style.display = 'block';
+        faqForm.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    cancelFaqBtn.addEventListener('click', () => {
+        faqForm.style.display = 'none';
+        resetFaqForm();
+    });
+
+    async function loadFaqs() {
+        hideError('faqsError');
+        const { data, error } = await sbClient
+            .from('faqs')
+            .select('*')
+            .order('sort_order', { ascending: true });
+
+        if (error) {
+            showError('faqsError', 'Failed to load FAQs.');
+            return;
+        }
+
+        faqsCache = data || [];
+
+        if (faqsCache.length === 0) {
+            faqsTableBody.innerHTML = '<tr><td colspan="5" class="admin-table-empty">No questions yet. Add the first one above.</td></tr>';
+            return;
+        }
+
+        faqsTableBody.innerHTML = faqsCache.map((f, i) => {
+            const answer = (f.answer || '').replace(/\s+/g, ' ');
+            return `
+            <tr>
+                <td>
+                    <div class="admin-row-actions">
+                        <button class="admin-btn-edit" data-action="up" data-id="${f.id}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">&uarr;</button>
+                        <button class="admin-btn-edit" data-action="down" data-id="${f.id}" ${i === faqsCache.length - 1 ? 'disabled' : ''} aria-label="Move down">&darr;</button>
+                    </div>
+                </td>
+                <td class="admin-faq-question">${escapeHtml(f.question)}</td>
+                <td class="admin-faq-answer">${escapeHtml(answer.slice(0, 90))}${answer.length > 90 ? '…' : ''}</td>
+                <td>${f.published ? 'Yes' : 'No'}</td>
+                <td>
+                    <div class="admin-row-actions">
+                        <button class="admin-btn-edit" data-action="edit" data-id="${f.id}">Edit</button>
+                        <button class="admin-btn-delete" data-action="delete" data-id="${f.id}">Delete</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // Swaps this row's sort_order with its neighbour's. Both rows are written
+    // so the order stays consistent even if the stored values have gaps.
+    async function moveFaq(id, direction) {
+        const index = faqsCache.findIndex((f) => f.id === id);
+        const neighbour = faqsCache[index + direction];
+        if (index === -1 || !neighbour) return;
+
+        const current = faqsCache[index];
+        const updates = [
+            sbClient.from('faqs').update({ sort_order: neighbour.sort_order, updated_at: new Date().toISOString() }).eq('id', current.id),
+            sbClient.from('faqs').update({ sort_order: current.sort_order, updated_at: new Date().toISOString() }).eq('id', neighbour.id),
+        ];
+        const results = await Promise.all(updates);
+        if (results.some((r) => r.error)) {
+            showError('faqsError', 'Failed to reorder the questions.');
+        }
+        loadFaqs();
+    }
+
+    faqsTableBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+
+        if (action === 'up' || action === 'down') {
+            btn.disabled = true;
+            await moveFaq(id, action === 'up' ? -1 : 1);
+            return;
+        }
+
+        if (action === 'delete') {
+            if (!confirm('Delete this question? It disappears from the site straight away.')) return;
+            const { error } = await sbClient.from('faqs').delete().eq('id', id);
+            if (error) showError('faqsError', 'Failed to delete that question.');
+            loadFaqs();
+            return;
+        }
+
+        if (action === 'edit') {
+            const faq = faqsCache.find((f) => f.id === id);
+            if (!faq) return;
+
+            document.getElementById('faqId').value = faq.id;
+            document.getElementById('faqQuestion').value = faq.question || '';
+            document.getElementById('faqAnswer').value = faq.answer || '';
+            document.getElementById('faqPublished').checked = !!faq.published;
+            faqForm.style.display = 'block';
+            faqForm.scrollIntoView({ behavior: 'smooth' });
+        }
+    });
+
+    faqForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError('faqsError');
+
+        const id = document.getElementById('faqId').value;
+        const payload = {
+            question: document.getElementById('faqQuestion').value.trim(),
+            answer: document.getElementById('faqAnswer').value.trim(),
+            published: document.getElementById('faqPublished').checked,
+            updated_at: new Date().toISOString(),
+        };
+
+        if (!payload.question || !payload.answer) {
+            showError('faqsError', 'Both the question and the answer are needed.');
+            return;
+        }
+
+        // New questions go to the bottom of the list.
+        if (!id) {
+            const highest = faqsCache.reduce((max, f) => Math.max(max, f.sort_order || 0), -1);
+            payload.sort_order = highest + 1;
+        }
+
+        const { error } = id
+            ? await sbClient.from('faqs').update(payload).eq('id', id)
+            : await sbClient.from('faqs').insert(payload);
+
+        if (error) {
+            showError('faqsError', 'Failed to save that question.');
+            return;
+        }
+
+        faqForm.style.display = 'none';
+        resetFaqForm();
+        loadFaqs();
+    });
+
     // ---------- Gallery ----------
 
     const galleryAdminGrid = document.getElementById('galleryAdminGrid');
     const galleryUploadInput = document.getElementById('galleryUploadInput');
     const galleryUploadStatus = document.getElementById('galleryUploadStatus');
     const GALLERY_BUCKET = 'gallery-images';
+    const heroSlideCount = document.getElementById('heroSlideCount');
+    // The site shows four header slides; the dashboard stops the owner
+    // picking more so it's obvious which ones are actually in use.
+    const MAX_HERO_SLIDES = 4;
+
+    const updateHeroSlideCount = () => {
+        if (!heroSlideCount) return;
+        const chosen = galleryAdminGrid.querySelectorAll('.gallery-hero-input:checked').length;
+        heroSlideCount.textContent = `${chosen} of ${MAX_HERO_SLIDES} chosen.`;
+    };
 
     async function loadGallery() {
         hideError('galleryError');
@@ -808,9 +1127,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             <input type="checkbox" class="gallery-visible-input" ${img.visible ? 'checked' : ''}> Visible
                         </label>
                     </div>
+                    <label class="admin-check-inline">
+                        <input type="checkbox" class="gallery-hero-input" ${img.hero_slide ? 'checked' : ''}> Header slider
+                    </label>
                     <button class="admin-btn-delete gallery-delete-btn" data-path="${escapeHtml(img.storage_path)}">Delete</button>
                 </div>
             </div>`).join('');
+
+        updateHeroSlideCount();
     }
 
     galleryAdminGrid.addEventListener('change', async (e) => {
@@ -823,10 +1147,25 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.target.classList.contains('gallery-order-input')) updates.sort_order = parseInt(e.target.value, 10) || 0;
         if (e.target.classList.contains('gallery-visible-input')) updates.visible = e.target.checked;
 
+        if (e.target.classList.contains('gallery-hero-input')) {
+            const chosen = galleryAdminGrid.querySelectorAll('.gallery-hero-input:checked').length;
+            if (e.target.checked && chosen > MAX_HERO_SLIDES) {
+                e.target.checked = false;
+                showError('galleryError', `The header slider holds ${MAX_HERO_SLIDES} photos — untick one before adding another.`);
+                updateHeroSlideCount();
+                return;
+            }
+            updates.hero_slide = e.target.checked;
+        }
+
         if (Object.keys(updates).length === 0) return;
 
         const { error } = await sbClient.from('gallery_images').update(updates).eq('id', id);
-        if (error) showError('galleryError', 'Failed to save changes.');
+        if (error) {
+            showError('galleryError', 'Failed to save changes.');
+            return;
+        }
+        updateHeroSlideCount();
     });
 
     galleryAdminGrid.addEventListener('click', async (e) => {
@@ -881,37 +1220,124 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---------- SEO ----------
 
     const seoForm = document.getElementById('seoForm');
+    const ogImageUrlInput = document.getElementById('ogImageUrl');
+    const ogImagePicker = document.getElementById('ogImagePicker');
+    const seoSaveStatus = document.getElementById('seoSaveStatus');
+
+    // Fields that map straight onto a site_settings column. Kept as a table so
+    // loading and saving can't drift apart.
+    const SEO_FIELDS = [
+        ['seoTitle', 'seo_title', 'text'],
+        ['seoDescription', 'seo_description', 'text'],
+        ['ogTitle', 'og_title', 'text'],
+        ['ogDescription', 'og_description', 'text'],
+        ['ogImageUrl', 'og_image_url', 'text'],
+        ['businessName', 'business_name', 'text'],
+        ['businessDescription', 'business_description', 'text'],
+        ['businessPhone', 'telephone', 'text'],
+        ['businessEmail', 'email', 'text'],
+        ['businessStreet', 'street_address', 'text'],
+        ['businessLocality', 'address_locality', 'text'],
+        ['businessRegion', 'address_region', 'text'],
+        ['businessCountry', 'address_country', 'text'],
+        ['businessMapsUrl', 'maps_url', 'text'],
+        ['businessPriceRange', 'price_range', 'text'],
+        ['businessLatitude', 'latitude', 'number'],
+        ['businessLongitude', 'longitude', 'number'],
+        ['businessRooms', 'number_of_rooms', 'number'],
+    ];
+
+    const markSelectedOgImage = () => {
+        if (!ogImagePicker) return;
+        const current = (ogImageUrlInput.value || '').trim();
+        ogImagePicker.querySelectorAll('.admin-og-option').forEach((option) => {
+            option.classList.toggle('selected', option.dataset.url === current);
+        });
+    };
+
+    async function loadOgImageOptions() {
+        if (!ogImagePicker) return;
+        const { data, error } = await sbClient
+            .from('gallery_images')
+            .select('id, public_url, alt_text')
+            .eq('visible', true)
+            .order('sort_order', { ascending: true });
+
+        if (error || !data || data.length === 0) {
+            ogImagePicker.innerHTML = '<p class="admin-table-empty">Upload photos in the Gallery tab to pick one here.</p>';
+            return;
+        }
+
+        ogImagePicker.innerHTML = data.map((img) => `
+            <button type="button" class="admin-og-option" data-url="${escapeHtml(img.public_url)}"
+                    title="${escapeHtml(img.alt_text || 'Gallery photo')}">
+                <img src="${escapeHtml(img.public_url)}" alt="${escapeHtml(img.alt_text || '')}">
+            </button>`).join('');
+        markSelectedOgImage();
+    }
+
+    if (ogImagePicker) {
+        ogImagePicker.addEventListener('click', (e) => {
+            const option = e.target.closest('.admin-og-option');
+            if (!option) return;
+            // Clicking the chosen one again clears it, so the site can fall
+            // back to its default share image.
+            const isSelected = option.classList.contains('selected');
+            ogImageUrlInput.value = isSelected ? '' : option.dataset.url;
+            markSelectedOgImage();
+        });
+    }
+
+    if (ogImageUrlInput) {
+        ogImageUrlInput.addEventListener('input', markSelectedOgImage);
+    }
 
     async function loadSeoSettings() {
         hideError('seoError');
+        loadOgImageOptions();
+
         const { data, error } = await sbClient.from('site_settings').select('*').eq('id', 1).single();
         if (error) {
             showError('seoError', 'Failed to load SEO settings.');
             return;
         }
-        document.getElementById('seoTitle').value = data.seo_title || '';
-        document.getElementById('seoDescription').value = data.seo_description || '';
-        document.getElementById('ogTitle').value = data.og_title || '';
-        document.getElementById('ogDescription').value = data.og_description || '';
-        document.getElementById('ogImageUrl').value = data.og_image_url || '';
+
+        SEO_FIELDS.forEach(([elementId, column]) => {
+            const el = document.getElementById(elementId);
+            if (el) el.value = data[column] ?? '';
+        });
+        markSelectedOgImage();
     }
 
     seoForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideError('seoError');
+        if (seoSaveStatus) seoSaveStatus.textContent = '';
 
-        const payload = {
-            seo_title: document.getElementById('seoTitle').value,
-            seo_description: document.getElementById('seoDescription').value,
-            og_title: document.getElementById('ogTitle').value || null,
-            og_description: document.getElementById('ogDescription').value || null,
-            og_image_url: document.getElementById('ogImageUrl').value || null,
-            updated_at: new Date().toISOString(),
-        };
+        const payload = { updated_at: new Date().toISOString() };
+        for (const [elementId, column, type] of SEO_FIELDS) {
+            const el = document.getElementById(elementId);
+            if (!el) continue;
+            const raw = el.value.trim();
+            if (type === 'number') {
+                const parsed = Number(raw);
+                payload[column] = raw === '' || Number.isNaN(parsed) ? null : parsed;
+            } else {
+                payload[column] = raw || null;
+            }
+        }
+
+        // These two are the page's own title and description — never blank.
+        if (!payload.seo_title || !payload.seo_description) {
+            showError('seoError', 'The page title and meta description are both needed.');
+            return;
+        }
 
         const { error } = await sbClient.from('site_settings').update(payload).eq('id', 1);
         if (error) {
             showError('seoError', 'Failed to save SEO settings.');
+            return;
         }
+        if (seoSaveStatus) seoSaveStatus.textContent = 'Saved. The live site picks this up within about 5 minutes.';
     });
 });

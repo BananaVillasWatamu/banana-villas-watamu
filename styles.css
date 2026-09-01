@@ -229,9 +229,82 @@ p {
     color: white;
 }
 
+/* Header slider — the photos crossfade behind the hero content. The .hero
+   background image above stays visible underneath as the fallback for when
+   no photos are flagged for the slider (or Supabase is unreachable). */
+.hero-slides {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+}
+
+.hero-slide {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed; /* matches the .hero parallax */
+    opacity: 0;
+    transition: opacity 1.4s ease-in-out;
+}
+
+.hero-slide.active {
+    opacity: 1;
+}
+
+/* One overlay over the whole stack rather than per slide, so the tint
+   doesn't double up mid-crossfade. */
+.hero-slides::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(rgba(45, 125, 111, 0.25), rgba(74, 55, 40, 0.5));
+    pointer-events: none;
+}
+
+.hero-dots {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1.5rem;
+    z-index: 2;
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.hero-dot {
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    background: transparent;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.hero-dot:hover {
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.hero-dot.active {
+    background: white;
+    transform: scale(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-slide {
+        transition: none;
+    }
+}
+
 .hero-content {
     max-width: 1200px;
     padding: 0 2rem;
+    /* Positioned so the z-index actually applies — without it the absolutely
+       positioned slides would paint over the hero text. */
+    position: relative;
     z-index: 1;
 }
 
@@ -588,14 +661,44 @@ p {
     margin-top: 1rem;
 }
 
-.btn-whatsapp {
-    background-color: #25D366;
-    box-shadow: 0 4px 14px 0 rgba(37, 211, 102, 0.39);
+.btn-cta {
+    padding: 1rem 1.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
 }
 
-.btn-whatsapp:hover {
-    background-color: #128C7E;
-    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.23);
+/* Secondary path: still WhatsApp, just not competing with the main CTA. */
+.form-actions-alt {
+    margin: 0;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-light);
+}
+
+.link-whatsapp {
+    font: inherit;
+    font-weight: 700;
+    color: #128C7E;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: rgba(18, 140, 126, 0.35);
+    text-underline-offset: 3px;
+    transition: var(--transition);
+}
+
+.link-whatsapp:hover {
+    color: #0e6f63;
+    text-decoration-color: currentColor;
+}
+
+.link-whatsapp:disabled {
+    opacity: 0.6;
+    cursor: default;
 }
 
 /* Footer */
@@ -619,8 +722,17 @@ footer {
     margin-bottom: 0.5rem;
 }
 
+/* The logo is a transparent PNG whose cyan and orange read fine straight on
+   the dark green — no white plate needed behind it. */
+.footer-logo {
+    height: 52px;
+    margin-bottom: 0.75rem;
+}
+
+/* The footer sits on dark green, so the warm --text-light used elsewhere
+   nearly disappears here; these are tinted off the background instead. */
 .footer-brand p {
-    color: var(--text-light);
+    color: rgba(255, 255, 255, 0.7);
     margin: 0;
 }
 
@@ -632,7 +744,7 @@ footer {
 }
 
 .footer-links a {
-    color: var(--text-light);
+    color: rgba(255, 255, 255, 0.75);
 }
 
 .footer-links a:hover {
@@ -646,20 +758,56 @@ footer {
     gap: 1.5rem;
     padding-top: 2rem;
     border-top: 1px solid rgba(255,255,255,0.1);
-    color: var(--text-light);
+    color: rgba(255, 255, 255, 0.6);
     font-size: 0.9rem;
     flex-wrap: wrap;
 }
 
+.footer-bottom p {
+    margin: 0;
+}
+
 .footer-admin-link {
-    color: rgba(255, 255, 255, 0.45);
-    font-size: 0.8rem;
-    text-decoration: underline;
-    text-underline-offset: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-pill);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
 }
 
 .footer-admin-link:hover {
-    color: rgba(255, 255, 255, 0.8);
+    border-color: rgba(255, 255, 255, 0.6);
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+.footer-admin-link svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Once the row wraps there's no left and right to align to, so centre it. */
+@media (max-width: 768px) {
+    .footer-content {
+        justify-content: center;
+        text-align: center;
+    }
+
+    .footer-brand {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .footer-bottom {
+        text-align: center;
+        gap: 1rem;
+    }
 }
 
 /* Lightbox */
@@ -824,7 +972,8 @@ footer {
         font-size: 2.5rem;
     }
 
-    .hero {
+    .hero,
+    .hero-slide {
         background-attachment: scroll;
     }
 
@@ -1011,6 +1160,10 @@ footer {
     display: block;
 }
 
+.location-map-link {
+    margin-top: 1rem;
+}
+
 /* ── FAQ Section ── */
 .faq-list {
     max-width: 800px;
@@ -1155,24 +1308,29 @@ footer {
     margin-bottom: 1.25rem;
 }
 
+/* Opaque on purpose: this notice also appears in the hero strip, where a
+   translucent tint sat straight on the hero photo and washed the text out. */
 .availability-note {
-    background: rgba(217, 119, 6, 0.1);
-    border: 1px solid rgba(217, 119, 6, 0.3);
+    background: #FFF7ED;
+    border: 1px solid rgba(154, 52, 18, 0.25);
+    border-left: 4px solid #C2410C;
     border-radius: var(--radius-sm);
-    color: #b45309;
+    color: #7C2D12;
     font-size: 0.875rem;
-    padding: 0.75rem 1rem;
+    line-height: 1.55;
+    padding: 0.85rem 1rem;
     margin-top: 0.75rem;
+    box-shadow: 0 4px 14px rgba(74, 55, 40, 0.12);
 }
 
 .availability-suggest-btn {
     display: inline-block;
-    margin-left: 0.5rem;
-    padding: 0.3rem 0.75rem;
+    margin: 0.15rem 0 0.15rem 0.5rem;
+    padding: 0.3rem 0.85rem;
     border-radius: var(--radius-pill);
-    border: 1px solid #b45309;
-    background: transparent;
-    color: #b45309;
+    border: 1px solid #9A3412;
+    background: #9A3412;
+    color: #FFF7ED;
     font-size: 0.8rem;
     font-weight: 600;
     cursor: pointer;
@@ -1180,7 +1338,8 @@ footer {
 }
 
 .availability-suggest-btn:hover {
-    background: #b45309;
+    background: #7C2D12;
+    border-color: #7C2D12;
     color: white;
 }
 

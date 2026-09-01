@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { getSupabaseAdmin } = require('./_lib/supabaseAdmin');
+const { buildBusinessSchema } = require('./_lib/businessSchema');
 
 const templatePath = path.join(__dirname, '..', 'home.template.html');
 
@@ -47,6 +48,7 @@ module.exports = async (req, res) => {
   }
 
   html = html
+    .split('{{BUSINESS_SCHEMA}}').join(buildBusinessSchema(settings, ogImage))
     .split('{{SEO_TITLE}}').join(escapeHtml(title))
     .split('{{SEO_DESCRIPTION}}').join(escapeHtml(description))
     .split('{{OG_TITLE}}').join(escapeHtml(ogTitle))
