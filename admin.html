@@ -470,14 +470,26 @@
                 <div class="admin-panel-header">
                     <h2>Gallery</h2>
                     <label class="btn-primary admin-upload-btn">
-                        + Upload photo
-                        <input type="file" id="galleryUploadInput" accept="image/*" hidden>
+                        + Upload photos
+                        <input type="file" id="galleryUploadInput" accept="image/*" multiple hidden>
                     </label>
                 </div>
                 <div id="galleryError" class="form-error-banner" style="display:none;"></div>
                 <p class="admin-hint">Tick <strong>Header slider</strong> on up to four photos to choose what rotates
                     behind the title at the top of the site. <span id="heroSlideCount" class="admin-sync-status"></span></p>
                 <p id="galleryUploadStatus" class="admin-sync-status"></p>
+                <div id="galleryUploadProgress" class="admin-progress" hidden>
+                    <div class="admin-progress-track">
+                        <div class="admin-progress-fill" id="galleryProgressFill"></div>
+                    </div>
+                    <span class="admin-progress-label" id="galleryProgressLabel"></span>
+                </div>
+                <div id="galleryDropzone" class="admin-dropzone" role="button" tabindex="0">
+                    <strong>Drag photos here to upload</strong>
+                    <span>or click to pick them — several at once is fine. JPG, PNG, WebP or GIF, up to 5MB each.</span>
+                </div>
+                <p class="admin-hint">Drag a photo card by its handle to reorder the gallery; the site shows them in
+                    this order.</p>
                 <div id="galleryAdminGrid" class="admin-gallery-grid">
                     <p class="admin-table-empty">Loading…</p>
                 </div>
@@ -598,6 +610,8 @@
 
         </main>
     </div>
+
+    <div id="adminToasts" class="admin-toasts" role="status" aria-live="polite"></div>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="supabaseClient.js"></script>

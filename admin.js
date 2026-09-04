@@ -12,6 +12,24 @@ document.addEventListener('DOMContentLoaded', () => {
         el.textContent = message;
         el.style.display = 'block';
     };
+    // Small transient notification, bottom-right. Used for things that
+    // finish in the background (uploads) where a banner at the top of a
+    // scrolled panel would be missed.
+    const showToast = (message, kind = 'success') => {
+        const host = document.getElementById('adminToasts');
+        if (!host) return;
+        const toast = document.createElement('div');
+        toast.className = `admin-toast admin-toast-${kind}`;
+        toast.textContent = message;
+        host.appendChild(toast);
+        // Next frame, so the entry transition actually runs.
+        requestAnimationFrame(() => toast.classList.add('visible'));
+        setTimeout(() => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 400);
+        }, 5000);
+    };
+
     const hideError = (id) => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -1087,11 +1105,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const galleryAdminGrid = document.getElementById('galleryAdminGrid');
     const galleryUploadInput = document.getElementById('galleryUploadInput');
     const galleryUploadStatus = document.getElementById('galleryUploadStatus');
+    const galleryDropzone = document.getElementById('galleryDropzone');
+    const galleryProgress = document.getElementById('galleryUploadProgress');
+    const galleryProgressFill = document.getElementById('galleryProgressFill');
+    const galleryProgressLabel = document.getElementById('galleryProgressLabel');
     const GALLERY_BUCKET = 'gallery-images';
     const heroSlideCount = document.getElementById('heroSlideCount');
     // The site shows four header slides; the dashboard stops the owner
     // picking more so it's obvious which ones are actually in use.
     const MAX_HERO_SLIDES = 4;
+    // Matches the limits the storage bucket itself enforces (schema.sql), so
+    // a file that would be rejected server-side is caught before uploading.
+    const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+    const ALLOWED_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+    let galleryCache = [];
 
     const updateHeroSlideCount = () => {
         if (!heroSlideCount) return;
@@ -1111,14 +1139,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (!data || data.length === 0) {
-            galleryAdminGrid.innerHTML = '<p class="admin-table-empty">No photos uploaded yet.</p>';
+        galleryCache = data || [];
+
+        if (galleryCache.length === 0) {
+            galleryAdminGrid.innerHTML = '<p class="admin-table-empty">No photos yet — drag some in above.</p>';
+            updateHeroSlideCount();
             return;
         }
 
-        galleryAdminGrid.innerHTML = data.map((img) => `
-            <div class="admin-gallery-item" data-id="${img.id}">
-                <img src="${escapeHtml(img.public_url)}" alt="${escapeHtml(img.alt_text || '')}">
+        galleryAdminGrid.innerHTML = galleryCache.map((img) => `
+            <div class="admin-gallery-item" data-id="${img.id}" draggable="true">
+                <div class="admin-gallery-drag" title="Drag to reorder">⠿ Drag to reorder</div>
+                <img src="${escapeHtml(img.public_url)}" alt="${escapeHtml(img.alt_text || '')}" draggable="false">
                 <div class="admin-gallery-item-body">
                     <input type="text" class="gallery-alt-input" placeholder="Alt text" value="${escapeHtml(img.alt_text || '')}">
                     <div class="admin-gallery-item-row">
@@ -1183,38 +1215,213 @@ document.addEventListener('DOMContentLoaded', () => {
         loadGallery();
     });
 
-    galleryUploadInput.addEventListener('change', async () => {
-        const file = galleryUploadInput.files[0];
-        if (!file) return;
+    // ---------- Gallery: drag to reorder ----------
 
-        galleryUploadStatus.textContent = 'Uploading…';
-        const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+    // Cards are reordered in the DOM as the pointer moves, then the new
+    // positions are written as sort_order 0..n-1 on drop. The numeric field
+    // on each card still works — it's the keyboard route to the same thing.
 
-        const { error: uploadError } = await sbClient.storage.from(GALLERY_BUCKET).upload(path, file);
-        if (uploadError) {
-            galleryUploadStatus.textContent = '';
-            showError('galleryError', 'Upload failed.');
-            galleryUploadInput.value = '';
+    let draggedCard = null;
+
+    const cardAfterPointer = (x, y) => {
+        const cards = [...galleryAdminGrid.querySelectorAll('.admin-gallery-item:not(.dragging)')];
+        return cards.find((card) => {
+            const box = card.getBoundingClientRect();
+            // First card whose centre is past the pointer, reading the grid
+            // row by row.
+            return y < box.bottom && (y < box.top || x < box.left + box.width / 2);
+        }) || null;
+    };
+
+    galleryAdminGrid.addEventListener('dragstart', (e) => {
+        const card = e.target.closest('.admin-gallery-item');
+        if (!card) return;
+        draggedCard = card;
+        card.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        // Firefox won't start a drag without data on the transfer.
+        e.dataTransfer.setData('text/plain', card.dataset.id);
+    });
+
+    galleryAdminGrid.addEventListener('dragover', (e) => {
+        if (!draggedCard) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const reference = cardAfterPointer(e.clientX, e.clientY);
+        if (reference === draggedCard) return;
+        galleryAdminGrid.insertBefore(draggedCard, reference);
+    });
+
+    galleryAdminGrid.addEventListener('dragend', async () => {
+        if (!draggedCard) return;
+        draggedCard.classList.remove('dragging');
+        draggedCard = null;
+
+        const ids = [...galleryAdminGrid.querySelectorAll('.admin-gallery-item')].map((c) => c.dataset.id);
+        const moved = ids
+            .map((id, index) => ({ id, index }))
+            .filter(({ id, index }) => {
+                const previous = galleryCache.find((img) => img.id === id);
+                return previous && previous.sort_order !== index;
+            });
+
+        if (moved.length === 0) return;
+
+        galleryUploadStatus.textContent = 'Saving new order…';
+        const results = await Promise.all(
+            moved.map(({ id, index }) => sbClient.from('gallery_images').update({ sort_order: index }).eq('id', id))
+        );
+        galleryUploadStatus.textContent = '';
+
+        if (results.some((r) => r.error)) {
+            showError('galleryError', 'Failed to save the new order.');
+        }
+        loadGallery();
+    });
+
+    // ---------- Gallery: uploads ----------
+
+    // Supabase's JS client doesn't report bytes sent, so the bar tracks files
+    // finished out of files queued. While one is in flight the active edge is
+    // striped, so a single upload still reads as "working" rather than as a
+    // bar stuck at zero.
+    const setUploadProgress = (done, total, label) => {
+        if (!galleryProgress) return;
+        galleryProgress.hidden = false;
+        galleryProgressFill.style.width = `${Math.round((done / total) * 100)}%`;
+        galleryProgressFill.classList.toggle('working', done < total);
+        galleryProgressLabel.textContent = label;
+    };
+
+    const clearUploadProgress = () => {
+        if (!galleryProgress) return;
+        galleryProgress.hidden = true;
+        galleryProgressFill.style.width = '0%';
+        galleryProgressFill.classList.remove('working');
+        galleryProgressLabel.textContent = '';
+    };
+
+    const describeUploadProblem = (file) => {
+        if (!ALLOWED_UPLOAD_TYPES.includes(file.type)) return `${file.name} isn't a JPG, PNG, WebP or GIF`;
+        if (file.size > MAX_UPLOAD_BYTES) return `${file.name} is over 5MB`;
+        return null;
+    };
+
+    // Handles one file or fifty, from the file picker or a drop. Each upload
+    // is awaited in turn rather than fired off at once: a phone-camera batch
+    // over a Watamu connection is friendlier to a queue than to a stampede,
+    // and the count stays honest as it goes.
+    async function uploadGalleryFiles(fileList) {
+        const files = [...(fileList || [])];
+        if (files.length === 0) return;
+
+        hideError('galleryError');
+
+        const rejected = files.map(describeUploadProblem).filter(Boolean);
+        const accepted = files.filter((f) => !describeUploadProblem(f));
+
+        if (accepted.length === 0) {
+            clearUploadProgress();
+            showToast(`${rejected.length} file${rejected.length === 1 ? '' : 's'} skipped.`, 'error');
+            showError('galleryError', `Nothing uploaded — ${rejected.join('; ')}.`);
             return;
         }
 
-        const { data: publicUrlData } = sbClient.storage.from(GALLERY_BUCKET).getPublicUrl(path);
+        let nextOrder = galleryCache.reduce((max, img) => Math.max(max, img.sort_order || 0), -1) + 1;
+        const failed = [...rejected];
+        let uploaded = 0;
 
-        const { error: insertError } = await sbClient.from('gallery_images').insert({
-            storage_path: path,
-            public_url: publicUrlData.publicUrl,
-            alt_text: '',
-            sort_order: 0,
-            visible: true,
+        for (const [index, file] of accepted.entries()) {
+            setUploadProgress(
+                index,
+                accepted.length,
+                accepted.length > 1
+                    ? `Uploading ${file.name} — ${index + 1} of ${accepted.length}`
+                    : `Uploading ${file.name}…`
+            );
+
+            const path = `${Date.now()}-${index}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+            const { error: uploadError } = await sbClient.storage.from(GALLERY_BUCKET).upload(path, file);
+            if (uploadError) {
+                failed.push(`${file.name} (upload failed)`);
+                continue;
+            }
+
+            const { data: publicUrlData } = sbClient.storage.from(GALLERY_BUCKET).getPublicUrl(path);
+            const { error: insertError } = await sbClient.from('gallery_images').insert({
+                storage_path: path,
+                public_url: publicUrlData.publicUrl,
+                alt_text: '',
+                sort_order: nextOrder++,
+                visible: true,
+            });
+
+            if (insertError) {
+                failed.push(`${file.name} (saved to storage but not listed)`);
+                continue;
+            }
+            uploaded += 1;
+        }
+
+        // Let the bar land on 100% before it disappears, so a fast upload
+        // doesn't just flicker.
+        setUploadProgress(accepted.length, accepted.length, 'Finishing up…');
+        setTimeout(clearUploadProgress, 600);
+
+        if (uploaded > 0) {
+            showToast(`${uploaded} photo${uploaded === 1 ? '' : 's'} uploaded.`);
+        }
+
+        if (failed.length > 0) {
+            showToast(`${failed.length} file${failed.length === 1 ? '' : 's'} skipped.`, 'error');
+            showError('galleryError', `Couldn't add: ${failed.join('; ')}.`);
+        }
+
+        galleryUploadInput.value = '';
+        loadGallery();
+    }
+
+    galleryUploadInput.addEventListener('change', () => uploadGalleryFiles(galleryUploadInput.files));
+
+    if (galleryDropzone) {
+        galleryDropzone.addEventListener('click', () => galleryUploadInput.click());
+
+        // dragenter/dragover both need preventDefault, or the browser just
+        // opens the dropped image in the tab.
+        ['dragenter', 'dragover'].forEach((type) => {
+            galleryDropzone.addEventListener(type, (e) => {
+                // Ignore a card being dragged around the grid — this zone is
+                // only for files arriving from outside the page.
+                if (draggedCard) return;
+                e.preventDefault();
+                galleryDropzone.classList.add('dragover');
+            });
         });
 
-        galleryUploadStatus.textContent = '';
-        galleryUploadInput.value = '';
+        ['dragleave', 'dragend'].forEach((type) => {
+            galleryDropzone.addEventListener(type, (e) => {
+                // Moving over a child element fires dragleave on the parent;
+                // only clear when the pointer has really left the zone.
+                if (type === 'dragleave' && galleryDropzone.contains(e.relatedTarget)) return;
+                galleryDropzone.classList.remove('dragover');
+            });
+        });
 
-        if (insertError) {
-            showError('galleryError', 'Upload succeeded but saving the record failed.');
-        }
-        loadGallery();
+        galleryDropzone.addEventListener('drop', (e) => {
+            if (draggedCard) return;
+            e.preventDefault();
+            galleryDropzone.classList.remove('dragover');
+            uploadGalleryFiles(e.dataTransfer.files);
+        });
+    }
+
+    // A file dropped anywhere else on the page would otherwise navigate away
+    // from the dashboard, losing whatever was half-typed in a form.
+    ['dragover', 'drop'].forEach((type) => {
+        document.addEventListener(type, (e) => {
+            if (e.target.closest('#galleryDropzone') || !e.dataTransfer?.types.includes('Files')) return;
+            e.preventDefault();
+        });
     });
 
     // ---------- SEO ----------

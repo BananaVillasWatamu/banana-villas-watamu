@@ -535,6 +535,177 @@
     color: var(--text-dark);
 }
 
+/* Gallery — drop-to-upload */
+.admin-dropzone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    padding: 1.75rem 1rem;
+    margin-bottom: 1rem;
+    border: 2px dashed var(--glass-border);
+    border-radius: var(--radius-md);
+    background: var(--bg-white);
+    color: var(--text-light);
+    font-size: 0.85rem;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.admin-dropzone strong {
+    color: var(--text-dark);
+    font-size: 0.95rem;
+}
+
+.admin-dropzone:hover,
+.admin-dropzone:focus-visible {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.admin-dropzone.dragover {
+    border-color: var(--primary-color);
+    background: rgba(45, 125, 111, 0.08);
+    color: var(--primary-color);
+}
+
+/* Gallery — drag to reorder */
+.admin-gallery-drag {
+    padding: 0.35rem 0.6rem;
+    background: var(--bg-light);
+    border-bottom: 1px solid var(--glass-border);
+    color: var(--text-light);
+    font-size: 0.72rem;
+    letter-spacing: 0.03em;
+    cursor: grab;
+    user-select: none;
+}
+
+.admin-gallery-item.dragging {
+    opacity: 0.4;
+    outline: 2px dashed var(--primary-color);
+}
+
+.admin-gallery-item.dragging .admin-gallery-drag {
+    cursor: grabbing;
+}
+
+/* Upload progress */
+.admin-progress {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.admin-progress-track {
+    flex: 1;
+    height: 8px;
+    border-radius: var(--radius-pill);
+    background: var(--bg-light);
+    overflow: hidden;
+}
+
+.admin-progress-fill {
+    height: 100%;
+    width: 0;
+    border-radius: var(--radius-pill);
+    background: var(--primary-color);
+    transition: width 0.4s ease;
+}
+
+/* Bytes sent aren't reported, so the leading edge is striped while a file is
+   actually in flight — motion that means "still working", not a fake %. */
+.admin-progress-fill.working {
+    background-image: linear-gradient(
+        110deg,
+        rgba(255, 255, 255, 0.3) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.3) 50%,
+        rgba(255, 255, 255, 0.3) 75%,
+        transparent 75%
+    );
+    background-size: 18px 18px;
+    animation: admin-progress-stripes 0.8s linear infinite;
+    min-width: 12px;
+}
+
+@keyframes admin-progress-stripes {
+    from { background-position: 0 0; }
+    to { background-position: 18px 0; }
+}
+
+.admin-progress-label {
+    font-size: 0.82rem;
+    color: var(--text-light);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 45%;
+}
+
+/* Toasts */
+.admin-toasts {
+    position: fixed;
+    right: 1.25rem;
+    bottom: 1.25rem;
+    z-index: 4000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    pointer-events: none;
+}
+
+.admin-toast {
+    padding: 0.8rem 1.15rem;
+    border-radius: var(--radius-sm);
+    border-left: 4px solid var(--primary-color);
+    background: var(--bg-white);
+    box-shadow: 0 10px 30px rgba(74, 55, 40, 0.18);
+    color: var(--text-dark);
+    font-size: 0.88rem;
+    font-weight: 500;
+    max-width: 320px;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.admin-toast.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.admin-toast-error {
+    border-left-color: #b91c1c;
+    color: #7f1d1d;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-progress-fill,
+    .admin-toast {
+        transition: none;
+    }
+
+    .admin-progress-fill.working {
+        animation: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .admin-toasts {
+        left: 1rem;
+        right: 1rem;
+    }
+
+    .admin-toast {
+        max-width: none;
+    }
+}
+
 @media (max-width: 700px) {
     .admin-bookings-top-row {
         flex-direction: column;
