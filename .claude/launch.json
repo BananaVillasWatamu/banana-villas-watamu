@@ -4,17 +4,22 @@
     {
       "name": "static-preview",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["serve", "-l", "8080", "."],
+      "runtimeArgs": [
+        "serve",
+        "-l",
+        "8080",
+        "."
+      ],
       "port": 8080
     },
     {
       "name": "dev",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "cmd",
       "runtimeArgs": [
-        "run",
-        "dev"
+        "/c",
+        "npx vercel dev --listen %PORT%"
       ],
-      "port": 3000
+      "autoPort": true
     }
   ]
 }
