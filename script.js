@@ -773,6 +773,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const HERO_SLIDE_COUNT = 4;
     const HERO_SLIDE_MS = 6000;
 
+    // Supabase public URLs are already percent-encoded, so encodeURI() here
+    // would double-encode them (%20 -> %2520) and the image would 404. Only
+    // the characters that would break out of url('...') need escaping.
+    const cssUrl = (url) => escapeHtml(url).replace(/'/g, '%27');
+
     const loadHeroSlides = async () => {
         if (typeof sbClient === 'undefined') return;
 
@@ -800,7 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
         stage.innerHTML = images.map((img, i) => `
             <div class="hero-slide${i === 0 ? ' active' : ''}" role="img"
                  aria-label="${escapeHtml(img.alt_text || 'Banana Villas Watamu')}"
-                 style="background-image: url('${encodeURI(img.public_url)}');"></div>`).join('');
+                 style="background-image: url('${cssUrl(img.public_url)}');"></div>`).join('');
 
         const slides = [...stage.querySelectorAll('.hero-slide')];
         if (dotsWrap) {
