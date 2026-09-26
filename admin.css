@@ -706,6 +706,57 @@
     }
 }
 
+/* Skeleton loaders — shown while a panel waits on Supabase, in place of the
+   bare "Loading…" text the tables used to sit on. */
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(122, 104, 88, 0.13);
+    border-radius: var(--radius-sm);
+}
+
+.skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    animation: skeleton-sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+    100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+        animation: none;
+        background: rgba(255, 255, 255, 0.3);
+    }
+}
+
+.skeleton-cell {
+    height: 0.8rem;
+    border-radius: var(--radius-pill);
+}
+
+/* Each column gets a slightly different width so a loading table reads as
+   rows of content rather than a barcode. */
+.admin-table .skeleton-row:nth-child(odd) .skeleton-cell { width: 80%; }
+.admin-table .skeleton-row:nth-child(even) .skeleton-cell { width: 62%; }
+.admin-table .skeleton-row td:first-child .skeleton-cell { width: 90%; }
+.admin-table .skeleton-row td:last-child .skeleton-cell { width: 45%; }
+
+.skeleton-gallery-tile {
+    height: 210px;
+    border-radius: var(--radius-md);
+}
+
+.skeleton-og-tile {
+    height: 74px;
+    border-radius: var(--radius-sm);
+}
+
 @media (max-width: 700px) {
     .admin-bookings-top-row {
         flex-direction: column;

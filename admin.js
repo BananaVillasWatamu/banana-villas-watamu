@@ -30,6 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 5000);
     };
 
+    // Skeleton loaders. Shown while a panel is fetching for the first time —
+    // a refresh after an edit keeps the rows already on screen rather than
+    // flashing grey bars over work the owner just did.
+    const skeletonRows = (rows, cols) => Array.from({ length: rows }, () =>
+        `<tr class="skeleton-row">${'<td><div class="skeleton skeleton-cell"></div></td>'.repeat(cols)}</tr>`
+    ).join('');
+
+    const showTableSkeleton = (tbody, cols, rows = 5) => {
+        if (tbody) tbody.innerHTML = skeletonRows(rows, cols);
+    };
+
     const hideError = (id) => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -128,6 +139,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadBookings() {
         hideError('bookingsError');
+        if (bookingsCache.length === 0) {
+            showTableSkeleton(bookingsTableBody, 9);
+            showTableSkeleton(document.getElementById('homeActiveBookingsBody'), 5, 3);
+        }
         const { data, error } = await sbClient
             .from('bookings')
             .select('*')
@@ -783,6 +798,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadEnquiries() {
         hideError('enquiriesError');
+        if (enquiriesCache.length === 0) showTableSkeleton(enquiriesTableBody, 9);
         const { data, error } = await sbClient
             .from('enquiries')
             .select('*')
@@ -848,6 +864,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadReviews() {
         hideError('reviewsError');
+        if (!reviewsTableBody.querySelector('tr[data-loaded]')) showTableSkeleton(reviewsTableBody, 6);
         const { data, error } = await sbClient
             .from('reviews')
             .select('*')
@@ -864,7 +881,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         reviewsTableBody.innerHTML = data.map((r) => `
-            <tr>
+            <tr data-loaded="1">
                 <td>${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</td>
                 <td>${escapeHtml(r.guest_name)}</td>
                 <td>${r.review_date}</td>
@@ -971,6 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadFaqs() {
         hideError('faqsError');
+        if (faqsCache.length === 0) showTableSkeleton(faqsTableBody, 5);
         const { data, error } = await sbClient
             .from('faqs')
             .select('*')
@@ -1129,6 +1147,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadGallery() {
         hideError('galleryError');
+        if (galleryCache.length === 0) {
+            galleryAdminGrid.innerHTML = Array.from({ length: 6 }, () =>
+                '<div class="skeleton skeleton-gallery-tile"></div>').join('');
+        }
         const { data, error } = await sbClient
             .from('gallery_images')
             .select('*')
@@ -1464,6 +1486,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadOgImageOptions() {
         if (!ogImagePicker) return;
+        ogImagePicker.innerHTML = Array.from({ length: 6 }, () =>
+            '<div class="skeleton skeleton-og-tile"></div>').join('');
         const { data, error } = await sbClient
             .from('gallery_images')
             .select('id, public_url, alt_text')

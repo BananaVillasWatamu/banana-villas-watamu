@@ -1230,6 +1230,98 @@ footer {
     font-size: 0.95rem;
 }
 
+/* ── Skeleton loaders ──
+   Shown while a section waits on Supabase. Each loader stashes the markup it
+   replaces and puts it back if the fetch fails, so a blocked CDN or a dead
+   connection still leaves the built-in content on the page rather than a
+   grid of grey boxes. */
+.skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: rgba(122, 104, 88, 0.12);
+    border-radius: var(--radius-sm);
+}
+
+.skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.55),
+        transparent
+    );
+    animation: skeleton-sweep 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+    100% { transform: translateX(100%); }
+}
+
+/* Motion is the only thing saying "still loading", so when it's turned off
+   the placeholder holds a steadier tone instead of just sitting flat. */
+@media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+        animation: none;
+        background: rgba(255, 255, 255, 0.25);
+    }
+}
+
+.skeleton-line {
+    height: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-pill);
+}
+
+.skeleton-line:last-child {
+    margin-bottom: 0;
+}
+
+.skeleton-line.short { width: 40%; }
+.skeleton-line.medium { width: 65%; }
+
+/* Gallery tiles reuse the bento sizing, so the skeleton keeps the same
+   rhythm the real grid will settle into. */
+.skeleton-tile {
+    width: 100%;
+    height: 100%;
+    min-height: 220px;
+    border-radius: var(--radius-md);
+}
+
+.skeleton-card {
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+}
+
+.skeleton-card .skeleton {
+    background-color: rgba(122, 104, 88, 0.15);
+}
+
+.skeleton-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.skeleton-author {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.skeleton-faq {
+    height: 3.5rem;
+    margin-bottom: 0.75rem;
+    border-radius: var(--radius-sm);
+}
+
 /* ── Sticky WhatsApp Button ── */
 .whatsapp-float {
     position: fixed;

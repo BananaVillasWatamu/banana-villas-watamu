@@ -716,11 +716,56 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 
+    // Skeleton loaders.
+    //
+    // Each section on this page ships with real content baked into the HTML,
+    // which is also the fallback when Supabase can't be reached. So a
+    // skeleton stashes that markup rather than discarding it: on success the
+    // real rows replace it, and on failure (or an empty table) restore() puts
+    // the built-in content straight back.
+    const withSkeleton = (el, html) => {
+        if (!el) return { restore: () => {} };
+        const original = el.innerHTML;
+        el.innerHTML = html;
+        el.setAttribute('aria-busy', 'true');
+        return {
+            restore: () => {
+                el.innerHTML = original;
+                el.removeAttribute('aria-busy');
+            },
+            done: () => el.removeAttribute('aria-busy'),
+        };
+    };
+
+    const repeat = (count, html) => Array.from({ length: count }, () => html).join('');
+
+    const reviewsSkeleton = () => repeat(3, `
+        <div class="skeleton-card">
+            <div class="skeleton skeleton-line short"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line medium"></div>
+            <div class="skeleton-author">
+                <div class="skeleton skeleton-avatar"></div>
+                <div style="flex:1;">
+                    <div class="skeleton skeleton-line short"></div>
+                    <div class="skeleton skeleton-line" style="width:30%;"></div>
+                </div>
+            </div>
+        </div>`);
+
+    const faqsSkeleton = () => repeat(6, '<div class="skeleton skeleton-faq"></div>');
+
     // Reviews — loaded from Supabase, replacing the hardcoded testimonial
     // cards. If the fetch fails or there's nothing published yet, the
     // hardcoded cards already in the HTML are left in place as a fallback.
     const loadReviews = async () => {
         if (typeof sbClient === 'undefined') return;
+
+        const grid = document.getElementById('testimonialsGrid');
+        if (!grid) return;
+        const skeleton = withSkeleton(grid, reviewsSkeleton());
+
         try {
             const { data, error } = await sbClient
                 .from('reviews')
@@ -728,10 +773,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .eq('published', true)
                 .order('review_date', { ascending: false });
 
-            if (error || !data || data.length === 0) return;
+            if (error || !data || data.length === 0) {
+                skeleton.restore();
+                return;
+            }
 
-            const grid = document.getElementById('testimonialsGrid');
-            if (!grid) return;
+            skeleton.done();
 
             grid.innerHTML = data.map((r, i) => {
                 const initials = (r.guest_name || '')
@@ -764,6 +811,7 @@ document.addEventListener('DOMContentLoaded', () => {
             grid.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
         } catch (err) {
             console.error('failed to load reviews', err);
+            skeleton.restore();
         }
     };
 
@@ -878,6 +926,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // the fetch fails or nothing is published.
     const loadFaqs = async () => {
         if (typeof sbClient === 'undefined') return;
+
+        const list = document.getElementById('faqList');
+        if (!list) return;
+        const skeleton = withSkeleton(list, faqsSkeleton());
+
         try {
             const { data, error } = await sbClient
                 .from('faqs')
@@ -885,10 +938,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .eq('published', true)
                 .order('sort_order', { ascending: true });
 
-            if (error || !data || data.length === 0) return;
+            if (error || !data || data.length === 0) {
+                skeleton.restore();
+                return;
+            }
 
-            const list = document.getElementById('faqList');
-            if (!list) return;
+            skeleton.done();
 
             list.innerHTML = data.map((f) => {
                 const paragraphs = escapeHtml(f.answer)
@@ -904,6 +959,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }).join('');
         } catch (err) {
             console.error('failed to load faqs', err);
+            skeleton.restore();
         }
     };
 
@@ -976,8 +1032,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     initGalleryCarousel();
 
+    // The skeleton borrows the same bento rhythm the real grid uses, so the
+    // layout doesn't jump when the photos arrive.
+    const gallerySkeleton = () => Array.from({ length: 8 }, (_, i) => {
+        const bentoClass = GALLERY_BENTO_PATTERN[i % GALLERY_BENTO_PATTERN.length];
+        return `<div class="gallery-item ${bentoClass}"><div class="skeleton skeleton-tile"></div></div>`;
+    }).join('');
+
     const loadGallery = async () => {
         if (typeof sbClient === 'undefined') return;
+
+        const grid = document.getElementById('galleryGrid');
+        if (!grid) return;
+        const skeleton = withSkeleton(grid, gallerySkeleton());
+
         try {
             const { data, error } = await sbClient
                 .from('gallery_images')
@@ -985,10 +1053,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 .eq('visible', true)
                 .order('sort_order', { ascending: true });
 
-            if (error || !data || data.length === 0) return;
+            if (error || !data || data.length === 0) {
+                skeleton.restore();
+                return;
+            }
 
-            const grid = document.getElementById('galleryGrid');
-            if (!grid) return;
+            skeleton.done();
 
             grid.innerHTML = data.map((img, i) => {
                 const bentoClass = GALLERY_BENTO_PATTERN[i % GALLERY_BENTO_PATTERN.length];
@@ -1002,6 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
             initGalleryCarousel();
         } catch (err) {
             console.error('failed to load gallery', err);
+            skeleton.restore();
         }
     };
 
