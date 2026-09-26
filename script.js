@@ -779,6 +779,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const cssUrl = (url) => escapeHtml(url).replace(/'/g, '%27');
 
     const loadHeroSlides = async () => {
+        // supabaseClient.js already explains this case in the console.
         if (typeof sbClient === 'undefined') return;
 
         const stage = document.getElementById('heroSlides');
@@ -795,7 +796,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 .order('sort_order', { ascending: true })
                 .limit(HERO_SLIDE_COUNT);
 
-            if (error || !data || data.length === 0) return;
+            if (error) {
+                console.error('[Banana Villas] Header slider query failed', error);
+                return;
+            }
+            if (!data || data.length === 0) {
+                console.info(
+                    '[Banana Villas] No photos are ticked for the header slider in the ' +
+                    'dashboard (Gallery tab), so the built-in hero image is showing instead.'
+                );
+                return;
+            }
             images = data;
         } catch (err) {
             console.error('failed to load header slides', err);
