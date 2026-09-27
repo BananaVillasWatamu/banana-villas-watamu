@@ -131,8 +131,10 @@ function card(activity, options = {}) {
     ? `<a class="activity-more" href="/activities/${escapeHtml(activity.slug)}">Read more</a>`
     : '';
 
-  const cta = activity.we_arrange
-    ? `<a class="btn-platform activity-cta" href="${enquiryHref(activity, { fromActivitiesPage })}">Book through us</a>`
+  // Straight to the request form on the activity's own page, where the
+  // relevant questions are, rather than to the villa's contact form.
+  const cta = activity.we_arrange && activity.slug
+    ? `<a class="btn-platform activity-cta" href="/activities/${escapeHtml(activity.slug)}#book">Book through us</a>`
     : '';
 
   return `

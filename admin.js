@@ -961,6 +961,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let enquiriesCache = [];
 
     const OUTCOME_LABELS = {
+        activity_request: 'Activity request',
         requested: 'Hold created',
         unavailable: 'Dates taken',
         rate_limited: 'Too many tries',
@@ -1007,9 +1008,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         enquiriesTableBody.innerHTML = rows.map((e) => {
-            const dates = e.checkin && e.checkout
-                ? `${e.checkin} → ${e.checkout}`
-                : escapeHtml(e.checkin || e.checkout || '—');
+            const dates = e.activity
+                ? escapeHtml(e.activity_date || 'date not given')
+                : e.checkin && e.checkout
+                    ? `${e.checkin} → ${e.checkout}`
+                    : escapeHtml(e.checkin || e.checkout || '—');
             const guests = (e.adults || e.kids) ? `${e.adults || 0}A / ${e.kids || 0}K` : '—';
             const contactBits = [];
             if (e.phone) contactBits.push(escapeHtml(e.phone));
@@ -1025,7 +1028,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return `
                 <tr class="${e.handled ? 'admin-row-handled' : ''}">
                     <td>${formatEnquiryTime(e.created_at)}</td>
-                    <td>${escapeHtml(e.guest_name || '—')}</td>
+                    <td>${escapeHtml(e.guest_name || '—')}
+                        ${e.activity ? `<br><span class="admin-enquiry-activity">${escapeHtml(e.activity)}</span>` : ''}</td>
                     <td>${contact}</td>
                     <td>${dates}</td>
                     <td>${guests}</td>

@@ -1701,6 +1701,33 @@ footer {
     text-underline-offset: 3px;
 }
 
+/* Activity request form */
+.activity-form {
+    margin-top: 1.5rem;
+    text-align: left;
+}
+
+.activity-form .form-group {
+    margin-bottom: 1rem;
+}
+
+.activity-form input,
+.activity-form textarea {
+    background: rgba(255, 255, 255, 0.75);
+}
+
+.activity-cta-meta {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--text-light);
+    vertical-align: middle;
+}
+
+.activity-detail-cta .form-actions {
+    margin-top: 1.25rem;
+}
+
 .activity-related {
     padding-top: 1.5rem;
     border-top: 1px solid var(--glass-border);

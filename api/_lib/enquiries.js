@@ -55,6 +55,9 @@ function normaliseEnquiry(body) {
     adults: int(body.adults, 0, 99),
     kids: int(body.kids, 0, 99),
     notes: str(body.notes ?? body.message, MAX_NOTES_LEN),
+    // Only set when the request came from an activity page.
+    activity: str(body.activity, 160),
+    activity_date: date(body.activity_date),
     transfer: body.transfer === true || body.transfer === 'true',
     channel: body.channel === 'whatsapp' ? 'whatsapp' : 'form',
   };
@@ -66,8 +69,9 @@ async function recordEnquiry(supabase, { body, outcome, bookingId = null, ip = n
   try {
     const row = normaliseEnquiry(body || {});
 
-    // A completely empty submission carries no lead worth keeping.
-    if (!row.guest_name && !row.phone && !row.email && !row.notes) return null;
+    // A completely empty submission carries no lead worth keeping. An
+    // activity request counts as content in itself.
+    if (!row.guest_name && !row.phone && !row.email && !row.notes && !row.activity) return null;
 
     if (ip) {
       const since = new Date(Date.now() - RATE_LIMIT_WINDOW_HOURS * 3600000).toISOString();

@@ -123,16 +123,59 @@ module.exports = async (req, res) => {
   // Something the villa arranges gets a booking CTA. A plain recommendation
   // gets a nudge about the villa itself instead — still not a dead end, but
   // it doesn't pretend you can book a public beach.
+  // A real form rather than a link to the villa's contact page: asking for a
+  // Gede Ruins tour on the 12th for four people has nothing to do with the
+  // fields on a room booking, and every hop between the button and the form
+  // loses people.
   const ctaBlock = activity.we_arrange
-    ? `<div class="activity-detail-cta glass-card">
-                    <h2>Want us to arrange it?</h2>
-                    <p>Send us your dates and we'll sort the details — we can book this alongside your stay.</p>
-                    <div class="activities-cta">
-                        <a href="/?activity=${encodeURIComponent(activity.title)}#contact" class="btn-primary btn-cta">Book through us <span aria-hidden="true">&rarr;</span></a>
-                        <p class="form-actions-alt">Or message us directly on
-                            <a class="link-whatsapp" href="${WHATSAPP}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
-                        </p>
-                    </div>
+    ? `<div class="activity-detail-cta glass-card" id="book">
+                    <h2>Request this${activity.duration_text ? ` <span class="activity-cta-meta">${escapeHtml(activity.duration_text)}</span>` : ''}</h2>
+                    <p>Tell us when and how many, and we'll confirm the details and the price with you.
+                        No payment now.</p>
+
+                    <form class="activity-form" id="activityBookingForm"
+                          data-activity="${escapeHtml(activity.title)}">
+                        <div id="activityFormError" class="form-error-banner" style="display:none;"></div>
+                        <div id="activityFormSuccess" class="form-success-banner" style="display:none;"></div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="actName">Your name</label>
+                                <input type="text" id="actName" name="name" required autocomplete="name">
+                            </div>
+                            <div class="form-group">
+                                <label for="actPhone">Phone / WhatsApp</label>
+                                <input type="tel" id="actPhone" name="phone" required autocomplete="tel">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="actDate">Preferred date</label>
+                                <input type="date" id="actDate" name="activity_date">
+                            </div>
+                            <div class="form-group">
+                                <label for="actPeople">How many people</label>
+                                <input type="number" id="actPeople" name="adults" min="1" max="20" value="2">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="actEmail">Email <span class="optional">(optional)</span></label>
+                            <input type="email" id="actEmail" name="email" autocomplete="email">
+                        </div>
+                        <div class="form-group">
+                            <label for="actNotes">Anything we should know? <span class="optional">(optional)</span></label>
+                            <textarea id="actNotes" name="notes" rows="2"
+                                placeholder="Staying at the villa? Travelling with children? Let us know."></textarea>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary btn-cta" id="actSubmit">Request ${escapeHtml(activity.title)}</button>
+                            <p class="form-actions-alt">Or ask on
+                                <a class="link-whatsapp" href="${WHATSAPP}?text=${encodeURIComponent(`Hello Banana Villas Watamu! I'd like to ask about ${activity.title}.`)}"
+                                   target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                            </p>
+                        </div>
+                    </form>
                 </div>`
     : `<div class="activity-detail-cta activity-detail-cta-soft">
                     <p>No booking needed for this one — it's simply somewhere we'd send you.

@@ -78,6 +78,67 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Activity request form. Posts to the same endpoint the booking form uses,
+    // so these land in the Enquiries tab with everything else — one inbox,
+    // the same rate limiting, the same reply buttons.
+    const activityForm = document.getElementById('activityBookingForm');
+    if (activityForm) {
+        const show = (id, message) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.textContent = message;
+            el.style.display = 'block';
+        };
+        const hide = (id) => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        };
+
+        activityForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            hide('activityFormError');
+            hide('activityFormSuccess');
+
+            const data = Object.fromEntries(new FormData(activityForm).entries());
+            if (!data.name || !data.phone) {
+                show('activityFormError', 'Please give us your name and a number we can reach you on.');
+                return;
+            }
+
+            const btn = document.getElementById('actSubmit');
+            const label = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Sending…';
+
+            try {
+                const response = await fetch('/api/enquiries', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ...data,
+                        activity: activityForm.dataset.activity,
+                        channel: 'form',
+                        outcome: 'activity_request',
+                    }),
+                });
+
+                if (!response.ok) throw new Error(`status ${response.status}`);
+
+                activityForm.reset();
+                show('activityFormSuccess',
+                    `Thanks — we've got your request for ${activityForm.dataset.activity}. `
+                    + `We'll come back to you on the number you gave us to confirm the details.`);
+            } catch (err) {
+                console.error('activity request failed', err);
+                show('activityFormError',
+                    "Sorry, that didn't send. Please try again, or message us on WhatsApp and we'll sort it.");
+            } finally {
+                btn.disabled = false;
+                btn.textContent = label;
+            }
+        });
+    }
+
     // Reveal-on-scroll, matching the homepage's feel.
     const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {

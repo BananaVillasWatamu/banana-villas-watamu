@@ -706,6 +706,17 @@
     }
 }
 
+.admin-enquiry-activity {
+    display: inline-block;
+    margin-top: 0.2rem;
+    padding: 0.12rem 0.55rem;
+    border-radius: var(--radius-pill);
+    background: rgba(24, 181, 234, 0.14);
+    color: var(--primary-deep);
+    font-size: 0.72rem;
+    font-weight: 600;
+}
+
 /* Guests */
 .admin-guest-history {
     list-style: none;
