@@ -706,6 +706,121 @@
     }
 }
 
+/* Bookings by channel */
+.admin-stats-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
+.admin-stats-head h3 {
+    margin: 0;
+}
+
+.admin-stats-range {
+    display: inline-flex;
+    gap: 0.25rem;
+    padding: 0.2rem;
+    border-radius: var(--radius-pill);
+    background: var(--bg-light);
+}
+
+.admin-range-btn {
+    padding: 0.35rem 0.85rem;
+    border: none;
+    border-radius: var(--radius-pill);
+    background: transparent;
+    color: var(--text-light);
+    font-family: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.admin-range-btn:hover {
+    color: var(--text-dark);
+}
+
+.admin-range-btn.active {
+    background: var(--primary-color);
+    color: var(--primary-ink);
+}
+
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.admin-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 1.1rem 1.25rem;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    background: var(--bg-light);
+}
+
+.admin-stat-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+
+.admin-stat-value {
+    font-family: 'Lora', serif;
+    font-size: 2rem;
+    line-height: 1.1;
+    color: var(--text-dark);
+}
+
+.admin-stat-sub {
+    font-size: 0.82rem;
+    color: var(--text-dark);
+}
+
+.admin-stat-hint {
+    font-size: 0.74rem;
+    color: var(--text-light);
+}
+
+/* A share bar reads faster than the percentage next to it. */
+.admin-stat-bar {
+    height: 5px;
+    margin: 0.5rem 0 0.35rem;
+    border-radius: var(--radius-pill);
+    background: rgba(122, 104, 88, 0.15);
+    overflow: hidden;
+}
+
+.admin-stat-bar span {
+    display: block;
+    height: 100%;
+    border-radius: var(--radius-pill);
+    background: var(--primary-color);
+    transition: width 0.4s ease;
+}
+
+/* Each channel keeps its own colour, matching the calendar legend. */
+.admin-stat-airbnb .admin-stat-bar span { background: #ff385c; }
+.admin-stat-booking_com .admin-stat-bar span { background: #003580; }
+
+.admin-stat-total {
+    background: var(--bg-white);
+    border-color: var(--primary-color);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-stat-bar span { transition: none; }
+}
+
 /* ── Add / edit dialogs ──
    The forms used to unfold inline and shove the page around. They open as
    modals now: the list stays put behind them, so it is obvious what you are

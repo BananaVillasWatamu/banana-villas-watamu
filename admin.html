@@ -67,6 +67,19 @@
                     <span id="homeTodayLabel" class="admin-sync-status"></span>
                 </div>
 
+                <div class="admin-card">
+                    <div class="admin-stats-head">
+                        <h3>Bookings by channel</h3>
+                        <div class="admin-stats-range" role="group" aria-label="Period">
+                            <button type="button" class="admin-range-btn active" data-range="all">All time</button>
+                            <button type="button" class="admin-range-btn" data-range="year">This year</button>
+                            <button type="button" class="admin-range-btn" data-range="90">Last 90 days</button>
+                        </div>
+                    </div>
+                    <div id="homeChannelStats" class="admin-stats-grid"></div>
+                    <p class="admin-hint" id="homeChannelNote" style="margin:1rem 0 0;"></p>
+                </div>
+
                 <div class="admin-home-grid">
                     <div class="admin-card">
                         <h3>Today</h3>

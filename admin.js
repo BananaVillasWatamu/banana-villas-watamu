@@ -503,7 +503,108 @@ document.addEventListener('DOMContentLoaded', () => {
             : '<li class="admin-home-empty">None</li>';
     };
 
+    // ---------- Bookings by channel ----------
+    //
+    // Counts confirmed bookings only. A pending hold is a request that has not
+    // been accepted yet, and manual date blocks (source 'blocked') are not
+    // bookings at all — counting either would flatter the numbers.
+    //
+    // Nights sit beside the count because a channel with fewer, longer stays
+    // can be worth more than one with more short ones, and because the
+    // commission you pay scales with nights rather than with bookings.
+
+    const CHANNELS = [
+        { key: 'direct', label: 'Website', hint: 'booked direct — no commission' },
+        { key: 'airbnb', label: 'Airbnb', hint: 'synced from your Airbnb calendar' },
+        { key: 'booking_com', label: 'Booking.com', hint: 'synced from your extranet' },
+    ];
+
+    let statsRange = 'all';
+
+    const nightsBetweenDates = (checkin, checkout) => {
+        const a = new Date(`${checkin}T00:00:00`);
+        const b = new Date(`${checkout}T00:00:00`);
+        const n = Math.round((b - a) / 86400000);
+        return Number.isFinite(n) && n > 0 ? n : 0;
+    };
+
+    const rangeStart = (range) => {
+        const now = new Date();
+        if (range === 'year') return `${now.getFullYear()}-01-01`;
+        if (range === '90') {
+            const d = new Date(now);
+            d.setDate(d.getDate() - 90);
+            return d.toISOString().slice(0, 10);
+        }
+        return null;
+    };
+
+    function renderChannelStats() {
+        const host = document.getElementById('homeChannelStats');
+        const note = document.getElementById('homeChannelNote');
+        if (!host) return;
+
+        const from = rangeStart(statsRange);
+        // Counted by check-in date: that is when the stay belongs to a period,
+        // and it is the only date every channel gives us.
+        const counted = bookingsCache.filter((b) =>
+            b.status === 'confirmed' &&
+            b.source !== 'blocked' &&
+            (!from || (b.checkin && b.checkin >= from))
+        );
+
+        const totals = CHANNELS.map((c) => {
+            const rows = counted.filter((b) => b.source === c.key);
+            return {
+                ...c,
+                bookings: rows.length,
+                nights: rows.reduce((sum, b) => sum + nightsBetweenDates(b.checkin, b.checkout), 0),
+            };
+        });
+
+        const allBookings = totals.reduce((n, t) => n + t.bookings, 0);
+        const allNights = totals.reduce((n, t) => n + t.nights, 0);
+
+        host.innerHTML = totals.map((t) => {
+            const share = allBookings ? Math.round((t.bookings / allBookings) * 100) : 0;
+            return `
+                <div class="admin-stat admin-stat-${t.key}">
+                    <span class="admin-stat-label">${t.label}</span>
+                    <span class="admin-stat-value">${t.bookings}</span>
+                    <span class="admin-stat-sub">${t.nights} night${t.nights === 1 ? '' : 's'} · ${share}% of bookings</span>
+                    <div class="admin-stat-bar" role="img" aria-label="${share}% of bookings">
+                        <span style="width:${share}%;"></span>
+                    </div>
+                    <span class="admin-stat-hint">${t.hint}</span>
+                </div>`;
+        }).join('') + `
+                <div class="admin-stat admin-stat-total">
+                    <span class="admin-stat-label">All channels</span>
+                    <span class="admin-stat-value">${allBookings}</span>
+                    <span class="admin-stat-sub">${allNights} night${allNights === 1 ? '' : 's'} booked</span>
+                    <span class="admin-stat-hint">confirmed bookings only</span>
+                </div>`;
+
+        const pending = bookingsCache.filter((b) => b.status === 'pending' && b.source === 'direct').length;
+        const periodLabel = statsRange === 'all' ? 'all time'
+            : statsRange === 'year' ? `${new Date().getFullYear()} so far`
+            : 'the last 90 days';
+        note.textContent = `Confirmed bookings by check-in date, ${periodLabel}. `
+            + `Pending website requests and manually blocked dates are not counted`
+            + (pending ? ` — ${pending} request${pending === 1 ? ' is' : 's are'} waiting in the Bookings tab.` : '.');
+    }
+
+    document.querySelectorAll('.admin-range-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            statsRange = btn.dataset.range;
+            document.querySelectorAll('.admin-range-btn').forEach((b) => b.classList.toggle('active', b === btn));
+            renderChannelStats();
+        });
+    });
+
     function renderHome() {
+        renderChannelStats();
+
         const todayStr = new Date().toISOString().slice(0, 10);
         const todayDate = new Date(`${todayStr}T00:00:00`);
         document.getElementById('homeTodayLabel').textContent = todayDate.toLocaleDateString('en-US', {
