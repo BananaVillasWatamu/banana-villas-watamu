@@ -1,6 +1,12 @@
 :root {
-    --primary-color: #2D7D6F; /* Warm Teal */
-    --primary-hover: #235f54;
+    /* The cyan from the logo. It is a bright colour, so it comes with two
+       companions: --primary-ink is what sits on top of it (white only manages
+       2.4:1 against it, well under the 4.5 needed), and --primary-deep is the
+       same hue deepened for use as text on the cream background. */
+    --primary-color: #18b5ea; /* Logo cyan */
+    --primary-hover: #0fa3d6;
+    --primary-ink: #04303e;   /* text on a cyan fill — 5.9:1, 4.8:1 on hover */
+    --primary-deep: #0d7295;  /* cyan as text on cream — 5.2:1 */
     --secondary-color: #E8C87A; /* Sandy Gold */
     --secondary-hover: #d4b05e;
     --text-dark: #4A3728; /* Driftwood */
@@ -11,7 +17,7 @@
     /* Glassmorphism */
     --glass-bg: rgba(245, 239, 224, 0.75);
     --glass-border: rgba(232, 200, 122, 0.3);
-    --glass-shadow: 0 8px 32px 0 rgba(45, 125, 111, 0.08);
+    --glass-shadow: 0 8px 32px 0 rgba(13, 114, 149, 0.10);
 
     --radius-sm: 8px;
     --radius-md: 16px;
@@ -111,13 +117,13 @@ p {
 
 .btn-primary {
     background-color: var(--primary-color);
-    color: white;
-    box-shadow: 0 4px 14px 0 rgba(45, 125, 111, 0.35);
+    color: var(--primary-ink);
+    box-shadow: 0 4px 14px 0 rgba(13, 114, 149, 0.28);
 }
 
 .btn-primary:hover {
     background-color: var(--primary-hover);
-    box-shadow: 0 6px 20px rgba(45, 125, 111, 0.22);
+    box-shadow: 0 6px 20px rgba(13, 114, 149, 0.20);
     transform: translateY(-2px);
 }
 
@@ -192,7 +198,7 @@ p {
 }
 
 .nav-links a:not(.btn-primary):hover {
-    color: var(--primary-color);
+    color: var(--primary-deep);
 }
 
 .mobile-menu-btn {
@@ -226,7 +232,7 @@ p {
        sitting in the CSS is exactly what made the site look cached when the
        slider was slow. A brand gradient can't go out of date, costs no
        request, and the slides fade in over it. */
-    background-image: linear-gradient(160deg, #2D7D6F 0%, #1F5B51 45%, #4A3728 100%);
+    background-image: linear-gradient(160deg, #0d7ea3 0%, #095468 45%, #4A3728 100%);
     background-size: cover;
     background-position: center;
     background-attachment: fixed; /* Parallax effect */
@@ -263,7 +269,7 @@ p {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(rgba(45, 125, 111, 0.25), rgba(74, 55, 40, 0.5));
+    background: linear-gradient(rgba(13, 114, 149, 0.28), rgba(74, 55, 40, 0.5));
     pointer-events: none;
 }
 
@@ -655,7 +661,7 @@ p {
     outline: none;
     border-color: var(--primary-color);
     background: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 0 0 4px rgba(45, 125, 111, 0.12);
+    box-shadow: 0 0 0 4px rgba(24, 181, 234, 0.12);
 }
 
 /* Form Actions */
@@ -708,7 +714,7 @@ p {
 
 /* Footer */
 footer {
-    background-color: #1A4D44;
+    background-color: #0e4256;
     color: white;
     padding: 4rem 0 2rem;
 }
@@ -866,7 +872,7 @@ footer {
 }
 
 .lightbox-close:hover {
-    color: var(--primary-color);
+    color: var(--primary-deep);
 }
 
 .lightbox-prev,
@@ -897,7 +903,7 @@ footer {
 .lightbox-prev:hover,
 .lightbox-next:hover {
     background: rgba(255, 255, 255, 0.3);
-    color: var(--primary-color);
+    color: var(--primary-deep);
 }
 
 /* Animations */
@@ -1094,7 +1100,7 @@ footer {
     height: 44px;
     border-radius: 50%;
     background: var(--primary-color);
-    color: white;
+    color: var(--primary-ink);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1202,13 +1208,13 @@ footer {
 }
 
 .faq-question:hover {
-    color: var(--primary-color);
+    color: var(--primary-deep);
 }
 
 .faq-icon {
     font-size: 1.4rem;
     font-weight: 300;
-    color: var(--primary-color);
+    color: var(--primary-deep);
     flex-shrink: 0;
     transition: transform 0.3s ease;
     line-height: 1;
@@ -1299,7 +1305,7 @@ footer {
 .notfound-body {
     min-height: 100vh;
     display: flex;
-    background: linear-gradient(160deg, #2D7D6F 0%, #1F5B51 45%, #4A3728 100%);
+    background: linear-gradient(160deg, #0d7ea3 0%, #095468 45%, #4A3728 100%);
     color: white;
 }
 
@@ -1402,13 +1408,13 @@ footer {
 
 .activity-chip:hover {
     border-color: var(--primary-color);
-    color: var(--primary-color);
+    color: var(--primary-deep);
 }
 
 .activity-chip.active {
     background: var(--primary-color);
     border-color: var(--primary-color);
-    color: white;
+    color: var(--primary-ink);
 }
 
 .activity-grid {
@@ -1430,7 +1436,7 @@ footer {
 
 .activity-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 16px 36px rgba(45, 125, 111, 0.14);
+    box-shadow: 0 16px 36px rgba(24, 181, 234, 0.16);
 }
 
 .activity-photo {
@@ -1449,7 +1455,7 @@ footer {
 .activity-photo-empty {
     width: 100%;
     height: 100%;
-    background: linear-gradient(140deg, rgba(45, 125, 111, 0.18), rgba(232, 200, 122, 0.25));
+    background: linear-gradient(140deg, rgba(24, 181, 234, 0.18), rgba(232, 200, 122, 0.25));
 }
 
 .activity-body {
@@ -1464,8 +1470,8 @@ footer {
     padding: 0.2rem 0.7rem;
     margin-bottom: 0.75rem;
     border-radius: var(--radius-pill);
-    background: rgba(45, 125, 111, 0.12);
-    color: var(--primary-color);
+    background: rgba(24, 181, 234, 0.12);
+    color: var(--primary-deep);
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: 0.04em;
@@ -1540,8 +1546,8 @@ footer {
 }
 
 .activity-badge-kids {
-    background: rgba(45, 125, 111, 0.14);
-    color: var(--primary-color);
+    background: rgba(24, 181, 234, 0.16);
+    color: var(--primary-deep);
 }
 
 .activities-cta {
@@ -1563,7 +1569,7 @@ footer {
    where they landed. */
 .field-highlight {
     border-color: var(--primary-color) !important;
-    box-shadow: 0 0 0 4px rgba(45, 125, 111, 0.15) !important;
+    box-shadow: 0 0 0 4px rgba(24, 181, 234, 0.15) !important;
 }
 
 @media (max-width: 767px) {
@@ -1611,7 +1617,7 @@ footer {
 }
 
 .activity-breadcrumb a {
-    color: var(--primary-color);
+    color: var(--primary-deep);
 }
 
 .activity-detail h1 {
@@ -1689,7 +1695,7 @@ footer {
 }
 
 .activity-detail-cta-soft a {
-    color: var(--primary-color);
+    color: var(--primary-deep);
     font-weight: 600;
     text-decoration: underline;
     text-underline-offset: 3px;
@@ -1715,7 +1721,7 @@ footer {
 }
 
 .activity-related-list a {
-    color: var(--primary-color);
+    color: var(--primary-deep);
     font-weight: 500;
 }
 
@@ -1726,7 +1732,7 @@ footer {
 
 /* "Read more" sits between the badges and the enquiry button on a card. */
 .activity-more {
-    color: var(--primary-color);
+    color: var(--primary-deep);
     font-size: 0.85rem;
     font-weight: 600;
     text-decoration: underline;
@@ -1738,7 +1744,7 @@ footer {
 }
 
 .activity-card h3 a:hover {
-    color: var(--primary-color);
+    color: var(--primary-deep);
 }
 
 @media (max-width: 767px) {
@@ -1891,7 +1897,7 @@ footer {
     font-family: 'Lora', Georgia, serif;
     font-size: 1.75rem;
     font-weight: 600;
-    color: var(--primary-color);
+    color: var(--primary-deep);
     line-height: 1;
     padding: 0.6rem 0;
 }
@@ -1908,10 +1914,10 @@ footer {
 }
 
 .form-success-banner {
-    background: rgba(45, 125, 111, 0.1);
-    border: 1px solid rgba(45, 125, 111, 0.3);
+    background: rgba(24, 181, 234, 0.1);
+    border: 1px solid rgba(24, 181, 234, 0.3);
     border-radius: var(--radius-sm);
-    color: var(--primary-color);
+    color: var(--primary-deep);
     font-size: 0.875rem;
     padding: 0.75rem 1rem;
     margin-bottom: 1.25rem;
@@ -2081,7 +2087,7 @@ footer {
 
 .btn-platform:hover {
     border-color: var(--primary-color);
-    color: var(--primary-color);
+    color: var(--primary-deep);
     transform: translateY(-2px);
 }
 
