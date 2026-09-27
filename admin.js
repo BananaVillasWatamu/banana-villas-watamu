@@ -293,6 +293,7 @@ document.addEventListener('DOMContentLoaded', () => {
         bookingsCache = data || [];
         renderCalendar();
         renderHome();
+        loadGuests();
         if (selectedDetailDate) renderDateDetails(selectedDetailDate);
 
         if (bookingsCache.length === 0) {
@@ -328,7 +329,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const guest = isBlocked
                 ? escapeHtml(b.notes || 'Blocked')
                 : escapeHtml(b.guest_name || (b.source !== 'direct' ? `(${b.source})` : '—'));
-            const contact = [b.phone, b.email].filter(Boolean).map(escapeHtml).join('<br>') || '—';
+            const contact = [b.phone, b.whatsapp && b.whatsapp !== b.phone ? `${b.whatsapp} (WhatsApp)` : null, b.email]
+                .filter(Boolean).map(escapeHtml).join('<br>') || '—';
             const guests = (b.adults || b.kids) ? `${b.adults || 0}A / ${b.kids || 0}K` : '—';
 
             return `
@@ -412,6 +414,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const checkout = document.getElementById('newBookingCheckout').value;
         const guest_name = document.getElementById('newBookingName').value;
         const phone = document.getElementById('newBookingPhone').value;
+        const whatsapp = document.getElementById('newBookingWhatsapp').value.trim();
         const email = document.getElementById('newBookingEmail').value;
         const adults = parseInt(document.getElementById('newBookingAdults').value, 10) || null;
         const kids = parseInt(document.getElementById('newBookingKids').value, 10) || 0;
@@ -438,6 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
             checkout,
             guest_name,
             phone,
+            whatsapp: whatsapp || null,
             email: email || null,
             adults,
             kids,
@@ -1055,6 +1059,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         enquiriesCache = data || [];
         renderEnquiries();
+        loadGuests();
     }
 
     if (enquiriesShowHandled) {
@@ -1083,6 +1088,229 @@ document.addEventListener('DOMContentLoaded', () => {
 
         loadEnquiries();
     });
+
+    // ---------- Guests ----------
+    //
+    // Everyone who has ever booked or enquired direct, built by grouping the
+    // bookings and enquiries you already hold rather than kept in a table of
+    // its own. A separate customers table would drift out of step the moment
+    // a booking was edited; derived, it cannot.
+    //
+    // Airbnb and Booking.com stays are deliberately absent: those feeds carry
+    // no names or contact details, so there is no guest to list.
+
+    const guestsTableBody = document.getElementById('guestsTableBody');
+    const guestSearch = document.getElementById('guestSearch');
+    const guestCount = document.getElementById('guestCount');
+    const guestExportBtn = document.getElementById('guestExportBtn');
+    const guestFilterRepeat = document.getElementById('guestFilterRepeat');
+
+    let guestsCache = [];
+
+    // Kenyan numbers get written 0722…, +254722… and 254722… for the same
+    // person, so they are folded to one form before anything is grouped.
+    const normalisePhone = (value) => {
+        const digits = String(value || '').replace(/\D/g, '');
+        if (!digits) return '';
+        if (digits.startsWith('254')) return digits;
+        if (digits.startsWith('0')) return `254${digits.slice(1)}`;
+        if (digits.length === 9) return `254${digits}`;
+        return digits;
+    };
+
+    const guestKey = (row) =>
+        normalisePhone(row.whatsapp || row.phone) ||
+        String(row.email || '').trim().toLowerCase() ||
+        String(row.guest_name || '').trim().toLowerCase();
+
+    const nightsOf = (checkin, checkout) => {
+        if (!checkin || !checkout) return 0;
+        const n = Math.round(
+            (new Date(`${checkout}T00:00:00`) - new Date(`${checkin}T00:00:00`)) / 86400000
+        );
+        return Number.isFinite(n) && n > 0 ? n : 0;
+    };
+
+    function buildGuests() {
+        const guests = new Map();
+
+        const touch = (row, kind) => {
+            const key = guestKey(row);
+            if (!key) return null;
+            if (!guests.has(key)) {
+                guests.set(key, {
+                    key,
+                    name: row.guest_name || '',
+                    phone: row.phone || '',
+                    whatsapp: row.whatsapp || '',
+                    email: row.email || '',
+                    stays: 0,
+                    nights: 0,
+                    enquiries: 0,
+                    firstStay: null,
+                    lastStay: null,
+                    lastSeen: null,
+                    history: [],
+                });
+            }
+            const g = guests.get(key);
+            // Keep the fullest version of each detail we have seen.
+            if (!g.name && row.guest_name) g.name = row.guest_name;
+            if (!g.phone && row.phone) g.phone = row.phone;
+            if (!g.whatsapp && row.whatsapp) g.whatsapp = row.whatsapp;
+            if (!g.email && row.email) g.email = row.email;
+            g.history.push({ kind, ...row });
+            return g;
+        };
+
+        // Confirmed direct bookings are the stays.
+        bookingsCache
+            .filter((b) => b.source === 'direct' && b.status !== 'expired')
+            .forEach((b) => {
+                const g = touch(b, 'booking');
+                if (!g) return;
+                if (b.status === 'confirmed') {
+                    g.stays += 1;
+                    g.nights += nightsOf(b.checkin, b.checkout);
+                    if (!g.firstStay || b.checkin < g.firstStay) g.firstStay = b.checkin;
+                    if (!g.lastStay || b.checkin > g.lastStay) g.lastStay = b.checkin;
+                }
+                const seen = b.created_at || b.checkin;
+                if (!g.lastSeen || seen > g.lastSeen) g.lastSeen = seen;
+            });
+
+        // Enquiries catch the people who asked but never booked — the ones
+        // worth following up.
+        enquiriesCache.forEach((e) => {
+            const g = touch(e, 'enquiry');
+            if (!g) return;
+            g.enquiries += 1;
+            if (!g.lastSeen || e.created_at > g.lastSeen) g.lastSeen = e.created_at;
+        });
+
+        return [...guests.values()].sort((a, b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
+    }
+
+    const waHref = (guest) => {
+        const number = normalisePhone(guest.whatsapp || guest.phone);
+        return number ? `https://wa.me/${number}` : null;
+    };
+
+    function renderGuests() {
+        if (!guestsTableBody) return;
+
+        const term = (guestSearch?.value || '').trim().toLowerCase();
+        const repeatOnly = guestFilterRepeat?.checked;
+
+        const rows = guestsCache.filter((g) => {
+            if (repeatOnly && g.stays < 2) return false;
+            if (!term) return true;
+            return [g.name, g.phone, g.whatsapp, g.email].join(' ').toLowerCase().includes(term);
+        });
+
+        const repeaters = guestsCache.filter((g) => g.stays >= 2).length;
+        if (guestCount) {
+            guestCount.textContent = `${guestsCache.length} guest${guestsCache.length === 1 ? '' : 's'}`
+                + ` · ${repeaters} repeat`;
+        }
+
+        if (rows.length === 0) {
+            guestsTableBody.innerHTML = `<tr><td colspan="7" class="admin-table-empty">${
+                guestsCache.length === 0
+                    ? 'Nobody yet. Guests appear here once they book direct or send an enquiry.'
+                    : 'Nobody matches that.'
+            }</td></tr>`;
+            return;
+        }
+
+        guestsTableBody.innerHTML = rows.map((g) => {
+            const wa = waHref(g);
+            const contact = [
+                g.phone ? escapeHtml(g.phone) : '',
+                g.whatsapp && g.whatsapp !== g.phone ? `${escapeHtml(g.whatsapp)} (WhatsApp)` : '',
+                g.email ? escapeHtml(g.email) : '',
+            ].filter(Boolean).join('<br>') || '—';
+
+            return `
+                <tr>
+                    <td class="admin-faq-question">${escapeHtml(g.name || '(no name)')}
+                        ${g.stays >= 2 ? '<span class="admin-status-pill admin-status-confirmed">repeat</span>' : ''}</td>
+                    <td>${contact}</td>
+                    <td>${g.stays}</td>
+                    <td>${g.nights}</td>
+                    <td>${g.enquiries}</td>
+                    <td>${g.lastStay || '—'}</td>
+                    <td>
+                        <div class="admin-row-actions">
+                            ${wa ? `<a class="admin-btn-edit" href="${wa}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
+                            ${g.email ? `<a class="admin-btn-edit" href="mailto:${escapeHtml(g.email)}">Email</a>` : ''}
+                            <button class="admin-btn-edit" data-action="history" data-key="${escapeHtml(g.key)}">History</button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    function loadGuests() {
+        guestsCache = buildGuests();
+        renderGuests();
+    }
+
+    if (guestSearch) guestSearch.addEventListener('input', renderGuests);
+    if (guestFilterRepeat) guestFilterRepeat.addEventListener('change', renderGuests);
+
+    if (guestsTableBody) {
+        guestsTableBody.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action="history"]');
+            if (!btn) return;
+            const guest = guestsCache.find((g) => g.key === btn.dataset.key);
+            if (!guest) return;
+
+            const entries = [...guest.history].sort((a, b) =>
+                String(b.created_at || b.checkin || '').localeCompare(String(a.created_at || a.checkin || '')));
+
+            document.getElementById('guestHistoryTitle').textContent = guest.name || 'Guest history';
+            document.getElementById('guestHistoryBody').innerHTML = `
+                <p class="admin-hint">${guest.stays} stay${guest.stays === 1 ? '' : 's'} ·
+                    ${guest.nights} night${guest.nights === 1 ? '' : 's'} ·
+                    ${guest.enquiries} enquir${guest.enquiries === 1 ? 'y' : 'ies'}</p>
+                <ul class="admin-guest-history">
+                    ${entries.map((h) => h.kind === 'booking'
+                        ? `<li><strong>Stay</strong> ${h.checkin} → ${h.checkout}
+                             <span class="admin-status-pill admin-status-${h.status}">${h.status}</span>
+                             ${h.notes ? `<br><span class="admin-hint">${escapeHtml(h.notes)}</span>` : ''}</li>`
+                        : `<li><strong>Enquiry</strong> ${(h.created_at || '').slice(0, 10)}
+                             ${h.checkin ? `for ${h.checkin} → ${h.checkout}` : ''}
+                             ${h.notes ? `<br><span class="admin-hint">${escapeHtml(h.notes)}</span>` : ''}</li>`
+                    ).join('')}
+                </ul>`;
+            document.getElementById('guestHistoryDialog').showModal();
+        });
+    }
+
+    // Straight to a spreadsheet, which is where mail-merges and campaigns
+    // actually get built.
+    if (guestExportBtn) {
+        guestExportBtn.addEventListener('click', () => {
+            const header = ['Name', 'Phone', 'WhatsApp', 'Email', 'Stays', 'Nights', 'Enquiries', 'First stay', 'Last stay'];
+            const cell = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+            const csv = [header.map(cell).join(',')]
+                .concat(guestsCache.map((g) => [
+                    g.name, g.phone, g.whatsapp, g.email,
+                    g.stays, g.nights, g.enquiries, g.firstStay || '', g.lastStay || '',
+                ].map(cell).join(',')))
+                .join('\r\n');
+
+            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `banana-villas-guests-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`${guestsCache.length} guest${guestsCache.length === 1 ? '' : 's'} exported.`);
+        });
+    }
 
     // ---------- Reviews ----------
 

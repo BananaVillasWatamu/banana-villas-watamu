@@ -49,6 +49,7 @@
                 <button class="admin-tab active" data-tab="home">Home</button>
                 <button class="admin-tab" data-tab="bookings">Bookings</button>
                 <button class="admin-tab" data-tab="enquiries">Enquiries<span id="enquiriesTabBadge" class="admin-tab-badge" hidden></span></button>
+                <button class="admin-tab" data-tab="guests">Guests</button>
                 <button class="admin-tab" data-tab="reviews">Reviews</button>
                 <button class="admin-tab" data-tab="faqs">FAQs</button>
                 <button class="admin-tab" data-tab="activities">Activities</button>
@@ -159,6 +160,12 @@
                         <div class="form-group">
                             <label for="newBookingPhone">Phone</label>
                             <input type="tel" id="newBookingPhone" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="newBookingWhatsapp">WhatsApp <span class="optional">(optional)</span></label>
+                            <input type="tel" id="newBookingWhatsapp" placeholder="If different from the phone number">
                         </div>
                     </div>
                     <div class="form-row">
@@ -364,7 +371,53 @@
                 </div>
             </section>
 
+            <!-- Guests -->
+            <section id="tab-guests" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>Guests</h2>
+                    <div class="admin-panel-actions">
+                        <span id="guestCount" class="admin-sync-status"></span>
+                        <button id="guestExportBtn" class="admin-btn-secondary">Export CSV</button>
+                    </div>
+                </div>
+                <p class="admin-hint">Everyone who has booked direct or sent an enquiry, with their history grouped
+                    together. Airbnb and Booking.com guests are not here — those calendar feeds carry no names or
+                    contact details, so there is nothing to list.</p>
+
+                <div class="admin-inline-form">
+                    <div class="form-group" style="flex:1;min-width:220px;">
+                        <label for="guestSearch">Search</label>
+                        <input type="search" id="guestSearch" placeholder="Name, phone or email">
+                    </div>
+                    <label class="admin-check-inline">
+                        <input type="checkbox" id="guestFilterRepeat"> Repeat guests only
+                    </label>
+                </div>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Guest</th>
+                                <th>Contact</th>
+                                <th>Stays</th>
+                                <th>Nights</th>
+                                <th>Enquiries</th>
+                                <th>Last stay</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guestsTableBody">
+                            <tr>
+                                <td colspan="7" class="admin-table-empty">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Reviews -->
+
             <section id="tab-reviews" class="admin-panel">
                 <div class="admin-panel-header">
                     <h2>Reviews</h2>
@@ -841,6 +894,16 @@
 
         </main>
     </div>
+
+    <dialog class="admin-dialog" id="guestHistoryDialog" aria-labelledby="guestHistoryTitle">
+        <div class="admin-dialog-panel">
+            <header class="admin-dialog-header">
+                <h3 id="guestHistoryTitle">Guest history</h3>
+                <button type="button" class="admin-dialog-close" data-close-dialog aria-label="Close">&times;</button>
+            </header>
+            <div class="admin-form" id="guestHistoryBody"></div>
+        </div>
+    </dialog>
 
     <div id="adminToasts" class="admin-toasts" role="status" aria-live="polite"></div>
 

@@ -46,6 +46,9 @@ create table bookings (
   guest_name text check (char_length(guest_name) <= 200),
   email text check (char_length(email) <= 200),
   phone text check (char_length(phone) <= 40),
+  -- Often a different number to the one above; it is what the Guests list
+  -- starts a chat from.
+  whatsapp text check (char_length(whatsapp) <= 40),
   adults int,
   kids int,
   notes text check (char_length(notes) <= 4000),
