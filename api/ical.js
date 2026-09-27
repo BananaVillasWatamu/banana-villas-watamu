@@ -1,4 +1,13 @@
+const crypto = require('crypto');
 const { getSupabaseAdmin } = require('./_lib/supabaseAdmin');
+
+// This feed is public — Airbnb and Booking.com fetch it unauthenticated — so
+// it should not hand out the database's own booking ids. A stable hash keeps
+// the UID stable across syncs (which is what the platforms match on) without
+// publishing the primary key.
+function eventUid(id) {
+  return crypto.createHash('sha256').update(`bvw:${id}`).digest('hex').slice(0, 32);
+}
 
 function pad(n) {
   return String(n).padStart(2, '0');
@@ -67,7 +76,7 @@ module.exports = async (req, res) => {
   for (const b of blocking) {
     lines.push(
       'BEGIN:VEVENT',
-      `UID:${b.id}@bananavillaswatamu.com`,
+      `UID:${eventUid(b.id)}@bananavillaswatamu.com`,
       `DTSTAMP:${stamp}`,
       `DTSTART;VALUE=DATE:${toICSDate(b.checkin)}`,
       `DTEND;VALUE=DATE:${toICSDate(b.checkout)}`,

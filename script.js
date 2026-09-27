@@ -455,6 +455,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     prefillActivityEnquiry();
 
+    // The form never submits on its own — both paths are driven by the two
+    // buttons below. This used to be an inline onsubmit attribute, which
+    // would have forced 'unsafe-inline' into the page's script policy.
+    const contactFormEl = document.getElementById('contactForm');
+    if (contactFormEl) {
+        contactFormEl.addEventListener('submit', (e) => e.preventDefault());
+    }
+
     // Contact form (booking request)
     //
     // Two ways out of this form, and both leave the guest's details with us:
