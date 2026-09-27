@@ -1,16 +1,38 @@
 -- Banana Villas Watamu — Supabase schema
--- Run once in the Supabase SQL editor (Database -> SQL Editor -> New query).
+--
+-- THIS FILE BUILDS A DATABASE FROM SCRATCH. It is the shape of the whole
+-- schema in one place, for setting up a new Supabase project. It is NOT how
+-- you apply a change to a database that already exists — for that, run the
+-- matching supabase/migration-*.sql file instead.
+--
+-- Every statement here is now guarded, so running it against an existing
+-- database is harmless rather than an error. It still will not add anything a
+-- migration would: it creates what is missing and leaves what is there alone.
+--
+-- Run in the Supabase SQL editor (Database -> SQL Editor -> New query).
 -- This also creates and locks down the "gallery-images" Storage bucket (see
 -- the bottom of this file) — no manual dashboard steps needed for that.
 
 create extension if not exists pgcrypto;
 
-create type booking_status as enum ('pending', 'confirmed', 'declined', 'expired');
-create type booking_source as enum ('direct', 'airbnb', 'booking_com', 'blocked');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'booking_status') then
+    create type booking_status as enum ('pending', 'confirmed', 'declined', 'expired');
+  end if;
+end
+$$;
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'booking_source') then
+    create type booking_source as enum ('direct', 'airbnb', 'booking_com', 'blocked');
+  end if;
+end
+$$;
 
 -- Reviews --------------------------------------------------------------
 
-create table reviews (
+create table if not exists reviews (
   id uuid primary key default gen_random_uuid(),
   -- Where the review was left, and the link back to it. The site shows the
   -- platform's logo and links through, so a guest can check the review is
@@ -28,10 +50,12 @@ create table reviews (
 
 alter table reviews enable row level security;
 
+drop policy if exists "public read published reviews" on reviews;
 create policy "public read published reviews"
   on reviews for select
   using (published = true);
 
+drop policy if exists "authenticated manage reviews" on reviews;
 create policy "authenticated manage reviews"
   on reviews for all
   using (auth.role() = 'authenticated')
@@ -39,7 +63,7 @@ create policy "authenticated manage reviews"
 
 -- Bookings ---------------------------------------------------------------
 
-create table bookings (
+create table if not exists bookings (
   id uuid primary key default gen_random_uuid(),
   checkin date not null,
   checkout date not null,
@@ -62,7 +86,7 @@ create table bookings (
   unique (source, external_uid)
 );
 
-create index bookings_range_idx on bookings (checkin, checkout);
+create index if not exists bookings_range_idx on bookings (checkin, checkout);
 
 alter table bookings enable row level security;
 
@@ -73,6 +97,7 @@ alter table bookings enable row level security;
 -- public anon key. The owner also inserts rows directly for manual date
 -- blocks (source = 'blocked') through this same policy — those don't need
 -- the guest-facing overlap-checking RPC.
+drop policy if exists "authenticated manage bookings" on bookings;
 create policy "authenticated manage bookings"
   on bookings for all
   using (auth.role() = 'authenticated')
@@ -149,9 +174,15 @@ grant execute on function request_booking(date, date, text, text, text, int, int
 -- lead the owner can follow up on. Bookings stay the source of truth for the
 -- calendar; this table is the enquiry log beside it.
 
-create type enquiry_channel as enum ('form', 'whatsapp');
+do $$
+begin
+  if not exists (select 1 from pg_type where typname = 'enquiry_channel') then
+    create type enquiry_channel as enum ('form', 'whatsapp');
+  end if;
+end
+$$;
 
-create table enquiries (
+create table if not exists enquiries (
   id uuid primary key default gen_random_uuid(),
   guest_name text check (char_length(guest_name) <= 200),
   email text check (char_length(email) <= 200),
@@ -162,6 +193,10 @@ create table enquiries (
   kids int,
   notes text check (char_length(notes) <= 4000),
   transfer boolean not null default false,
+  -- Set when the enquiry came from an activity page rather than the booking
+  -- form: which activity, and the day they would like to do it.
+  activity text check (char_length(activity) <= 160),
+  activity_date date,
   channel enquiry_channel not null default 'form',
   -- 'requested' | 'unavailable' | 'rate_limited' | 'invalid' | 'error' |
   -- 'whatsapp_only' — why the enquiry did or didn't become a hold.
@@ -172,13 +207,14 @@ create table enquiries (
   created_at timestamptz not null default now()
 );
 
-create index enquiries_created_at_idx on enquiries (created_at desc);
+create index if not exists enquiries_created_at_idx on enquiries (created_at desc);
 
 alter table enquiries enable row level security;
 
 -- Same shape as bookings: no public policy at all. Guests never touch this
 -- table directly — /api/bookings and /api/enquiries write to it with the
 -- service-role key, which bypasses RLS.
+drop policy if exists "authenticated manage enquiries" on enquiries;
 create policy "authenticated manage enquiries"
   on enquiries for all
   using (auth.role() = 'authenticated')
@@ -186,7 +222,7 @@ create policy "authenticated manage enquiries"
 
 -- Gallery ------------------------------------------------------------------
 
-create table gallery_images (
+create table if not exists gallery_images (
   id uuid primary key default gen_random_uuid(),
   storage_path text not null,
   public_url text not null,
@@ -201,10 +237,12 @@ create table gallery_images (
 
 alter table gallery_images enable row level security;
 
+drop policy if exists "public read visible gallery images" on gallery_images;
 create policy "public read visible gallery images"
   on gallery_images for select
   using (visible = true);
 
+drop policy if exists "authenticated manage gallery images" on gallery_images;
 create policy "authenticated manage gallery images"
   on gallery_images for all
   using (auth.role() = 'authenticated')
@@ -215,7 +253,7 @@ create policy "authenticated manage gallery images"
 -- seed.sql loads the original eight so nothing changes on the public page
 -- until the owner edits them from the dashboard.
 
-create table faqs (
+create table if not exists faqs (
   id uuid primary key default gen_random_uuid(),
   question text not null check (char_length(question) <= 300),
   answer text not null check (char_length(answer) <= 4000),
@@ -225,14 +263,16 @@ create table faqs (
   updated_at timestamptz not null default now()
 );
 
-create index faqs_sort_order_idx on faqs (sort_order);
+create index if not exists faqs_sort_order_idx on faqs (sort_order);
 
 alter table faqs enable row level security;
 
+drop policy if exists "public read published faqs" on faqs;
 create policy "public read published faqs"
   on faqs for select
   using (published = true);
 
+drop policy if exists "authenticated manage faqs" on faqs;
 create policy "authenticated manage faqs"
   on faqs for all
   using (auth.role() = 'authenticated')
@@ -244,7 +284,7 @@ create policy "authenticated manage faqs"
 -- invites the guest to ask, so nothing here can go stale when someone else's
 -- business changes its rates.
 
-create table activities (
+create table if not exists activities (
   id uuid primary key default gen_random_uuid(),
   title text not null check (char_length(title) <= 160),
   -- Free text rather than an enum so a new category is a dropdown entry in
@@ -277,15 +317,17 @@ create table activities (
   updated_at timestamptz not null default now()
 );
 
-create index activities_sort_order_idx on activities (sort_order);
-create index activities_featured_idx on activities (featured) where featured;
+create index if not exists activities_sort_order_idx on activities (sort_order);
+create index if not exists activities_featured_idx on activities (featured) where featured;
 
 alter table activities enable row level security;
 
+drop policy if exists "public read published activities" on activities;
 create policy "public read published activities"
   on activities for select
   using (published = true);
 
+drop policy if exists "authenticated manage activities" on activities;
 create policy "authenticated manage activities"
   on activities for all
   using (auth.role() = 'authenticated')
@@ -293,7 +335,7 @@ create policy "authenticated manage activities"
 
 -- SEO / site settings (singleton row) --------------------------------------
 
-create table site_settings (
+create table if not exists site_settings (
   id int primary key default 1 check (id = 1),
   seo_title text not null default 'Banana Villas Watamu | Your Vacation Starts Here',
   seo_description text not null default 'Experience luxury and nature at Banana Villas Watamu. A premium villa with a stunning oasis-style swimming pool and modern architecture.',
@@ -321,10 +363,11 @@ create table site_settings (
   updated_at timestamptz not null default now()
 );
 
-insert into site_settings (id) values (1);
+insert into site_settings (id) values (1) on conflict (id) do nothing;
 
 alter table site_settings enable row level security;
 
+drop policy if exists "authenticated manage site settings" on site_settings;
 create policy "authenticated manage site settings"
   on site_settings for all
   using (auth.role() = 'authenticated')
@@ -345,10 +388,12 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+drop policy if exists "public read gallery bucket" on storage.objects;
 create policy "public read gallery bucket"
   on storage.objects for select
   using (bucket_id = 'gallery-images');
 
+drop policy if exists "authenticated manage gallery bucket" on storage.objects;
 create policy "authenticated manage gallery bucket"
   on storage.objects for all
   using (bucket_id = 'gallery-images' and auth.role() = 'authenticated')
@@ -364,10 +409,12 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+drop policy if exists "public read activity bucket" on storage.objects;
 create policy "public read activity bucket"
   on storage.objects for select
   using (bucket_id = 'activity-images');
 
+drop policy if exists "authenticated manage activity bucket" on storage.objects;
 create policy "authenticated manage activity bucket"
   on storage.objects for all
   using (bucket_id = 'activity-images' and auth.role() = 'authenticated')
