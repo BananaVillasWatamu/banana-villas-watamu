@@ -12,6 +12,11 @@ create type booking_source as enum ('direct', 'airbnb', 'booking_com', 'blocked'
 
 create table reviews (
   id uuid primary key default gen_random_uuid(),
+  -- Where the review was left, and the link back to it. The site shows the
+  -- platform's logo and links through, so a guest can check the review is
+  -- real rather than taking the site's word for it.
+  source text not null default 'direct'
+    check (source in ('google', 'airbnb', 'booking_com', 'tripadvisor', 'direct')),
   source_url text check (char_length(source_url) <= 500),
   rating smallint not null check (rating between 1 and 5),
   guest_name text not null check (char_length(guest_name) <= 200),
@@ -230,6 +235,59 @@ create policy "authenticated manage faqs"
   using (auth.role() = 'authenticated')
   with check (auth.role() = 'authenticated');
 
+-- Activities ---------------------------------------------------------------
+-- Things to do in Watamu, rendered into /activities and the homepage teaser
+-- by the API. No price columns on purpose: the page recommends things and
+-- invites the guest to ask, so nothing here can go stale when someone else's
+-- business changes its rates.
+
+create table activities (
+  id uuid primary key default gen_random_uuid(),
+  title text not null check (char_length(title) <= 160),
+  -- Free text rather than an enum so a new category is a dropdown entry in
+  -- the dashboard, not a migration.
+  category text not null default 'Excursions' check (char_length(category) <= 60),
+  summary text not null default '' check (char_length(summary) <= 400),
+  description text not null default '' check (char_length(description) <= 4000),
+  image_path text,
+  image_url text,
+  -- Changes the button from "Ask us about it" to "Book through us".
+  we_arrange boolean not null default false,
+  -- A flag rather than a category: an activity can be watersports and good
+  -- with kids at once, and a category would force a choice between them.
+  kid_friendly boolean not null default false,
+  -- Address of this activity's own page, /activities/<slug>, which is what
+  -- gives its meta tags and social image somewhere to live.
+  slug text unique,
+  -- All optional: each falls back to the title, summary and photo above.
+  seo_title text check (char_length(seo_title) <= 200),
+  seo_description text check (char_length(seo_description) <= 400),
+  og_image_url text,
+  -- e.g. "5 min walk", "20 min drive" — kept as text because the useful
+  -- answer is rarely a number.
+  distance_text text check (char_length(distance_text) <= 80),
+  duration_text text check (char_length(duration_text) <= 80),
+  featured boolean not null default false,
+  sort_order int not null default 0,
+  published boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index activities_sort_order_idx on activities (sort_order);
+create index activities_featured_idx on activities (featured) where featured;
+
+alter table activities enable row level security;
+
+create policy "public read published activities"
+  on activities for select
+  using (published = true);
+
+create policy "authenticated manage activities"
+  on activities for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
 -- SEO / site settings (singleton row) --------------------------------------
 
 create table site_settings (
@@ -292,3 +350,22 @@ create policy "authenticated manage gallery bucket"
   on storage.objects for all
   using (bucket_id = 'gallery-images' and auth.role() = 'authenticated')
   with check (bucket_id = 'gallery-images' and auth.role() = 'authenticated');
+
+-- Photos for the cards. Same shape as the gallery bucket: public to read,
+-- writable only by the logged-in owner, with the size and type limits
+-- enforced by storage itself rather than trusted from the browser.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('activity-images', 'activity-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+create policy "public read activity bucket"
+  on storage.objects for select
+  using (bucket_id = 'activity-images');
+
+create policy "authenticated manage activity bucket"
+  on storage.objects for all
+  using (bucket_id = 'activity-images' and auth.role() = 'authenticated')
+  with check (bucket_id = 'activity-images' and auth.role() = 'authenticated');

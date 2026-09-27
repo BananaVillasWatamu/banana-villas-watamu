@@ -41,6 +41,73 @@ document.addEventListener('DOMContentLoaded', () => {
         if (tbody) tbody.innerHTML = skeletonRows(rows, cols);
     };
 
+    // Add/edit forms open as modal dialogs rather than unfolding somewhere
+    // down the page and pushing everything else around. The forms themselves
+    // are untouched — same ids, same fields, same handlers — they just live
+    // inside a <dialog> now, which brings focus handling, Esc to close and a
+    // backdrop for free.
+    const dialogFor = (form) => form.closest('.admin-dialog');
+
+    const openFormDialog = (form, title) => {
+        const dialog = dialogFor(form);
+        if (!dialog) {
+            form.style.display = 'block';
+            return;
+        }
+        if (title) {
+            const heading = dialog.querySelector('.admin-dialog-header h3');
+            if (heading) heading.textContent = title;
+        }
+        if (!dialog.open) dialog.showModal();
+        // Put the cursor in the first real field rather than on the close button.
+        const first = form.querySelector('input:not([type="hidden"]):not([hidden]), textarea, select');
+        if (first) setTimeout(() => first.focus({ preventScroll: true }), 50);
+    };
+
+    const closeFormDialog = (form) => {
+        const dialog = dialogFor(form);
+        if (!dialog) {
+            form.style.display = 'none';
+            return;
+        }
+        if (dialog.open) dialog.close();
+    };
+
+    // Buttons say what they are doing. Without this a slow save looks like a
+    // dead button and gets pressed twice.
+    const buttonBusy = (btn, label = 'Saving…') => {
+        if (!btn) return () => {};
+        const original = btn.innerHTML;
+        const wasDisabled = btn.disabled;
+        btn.disabled = true;
+        btn.classList.add('is-busy');
+        btn.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span>${label}`;
+
+        return (doneLabel) => {
+            btn.classList.remove('is-busy');
+            if (doneLabel) {
+                btn.classList.add('is-done');
+                btn.innerHTML = `<span class="btn-tick" aria-hidden="true">&#10003;</span>${doneLabel}`;
+                setTimeout(() => {
+                    btn.classList.remove('is-done');
+                    btn.innerHTML = original;
+                    btn.disabled = wasDisabled;
+                }, 1600);
+                return;
+            }
+            btn.innerHTML = original;
+            btn.disabled = wasDisabled;
+        };
+    };
+
+    document.querySelectorAll('.admin-dialog').forEach((dialog) => {
+        dialog.addEventListener('click', (e) => {
+            // The backdrop is the dialog itself; clicks on the panel bubble
+            // from a child, so this only fires outside it.
+            if (e.target === dialog || e.target.closest('[data-close-dialog]')) dialog.close();
+        });
+    });
+
     const hideError = (id) => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
@@ -61,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadEnquiries();
         loadReviews();
         loadFaqs();
+        loadActivities();
         loadGallery();
         loadSeoSettings();
         loadIcalSettings();
@@ -119,6 +187,75 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active');
         });
     });
+
+    // ---------- Photo compression ----------
+    //
+    // Phones produce 4000px, multi-megabyte photos, and every one of those
+    // that reaches storage has to be downloaded by every visitor. The gallery
+    // already needed rescuing once (35MB down to 14MB) — this stops it
+    // happening again by resizing in the browser before the upload starts.
+    //
+    // Falls back to the original file whenever anything is unsupported or the
+    // result comes out bigger: a slightly heavy photo beats a failed upload.
+    const MAX_UPLOAD_WIDTH = 2000;
+    const UPLOAD_QUALITY = 0.78;
+    // Below this there is nothing worth gaining.
+    const COMPRESS_FLOOR_BYTES = 300 * 1024;
+
+    const safeFileName = (name) => name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const kb = (bytes) => Math.round(bytes / 1024);
+
+    const loadBitmap = (file) => new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode failed')); };
+        img.src = url;
+    });
+
+    // Returns { file, name, note } — the file to upload, the filename to store
+    // it under, and a line for the status area.
+    async function prepareImageForUpload(file) {
+        const original = {
+            file,
+            name: safeFileName(file.name),
+            note: `${kb(file.size)} KB`,
+        };
+
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return original;
+        if (file.size <= COMPRESS_FLOOR_BYTES) return original;
+
+        try {
+            const img = await loadBitmap(file);
+            const scale = Math.min(1, MAX_UPLOAD_WIDTH / img.naturalWidth);
+            const width = Math.round(img.naturalWidth * scale);
+            const height = Math.round(img.naturalHeight * scale);
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, 0, 0, width, height);
+
+            const blob = await new Promise((resolve) =>
+                canvas.toBlob(resolve, 'image/webp', UPLOAD_QUALITY));
+
+            // toBlob hands back null when the format isn't supported, and a
+            // re-encode occasionally lands bigger than the original.
+            if (!blob || blob.size >= file.size) return original;
+
+            const name = `${safeFileName(file.name).replace(/\.[^.]+$/, '')}.webp`;
+            return {
+                file: new File([blob], name, { type: 'image/webp' }),
+                name,
+                note: `${kb(file.size)} KB → ${kb(blob.size)} KB (${img.naturalWidth}px → ${width}px)`,
+            };
+        } catch (err) {
+            console.warn('could not compress, uploading the original', err);
+            return original;
+        }
+    }
 
     // ---------- Bookings ----------
 
@@ -260,16 +397,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     addBookingBtn.addEventListener('click', () => {
         addBookingForm.reset();
-        addBookingForm.style.display = 'block';
-        addBookingForm.scrollIntoView({ behavior: 'smooth' });
+        openFormDialog(addBookingForm, 'Add booking');
     });
     cancelAddBookingBtn.addEventListener('click', () => {
-        addBookingForm.style.display = 'none';
+        closeFormDialog(addBookingForm);
     });
 
     addBookingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideError('bookingsError');
+        const bookingDone = buttonBusy(addBookingForm.querySelector('button[type="submit"]'), 'Adding…');
 
         const checkin = document.getElementById('newBookingCheckin').value;
         const checkout = document.getElementById('newBookingCheckout').value;
@@ -282,10 +419,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!guest_name || !phone || !checkin || !checkout) {
             showError('bookingsError', 'Please fill in guest name, phone, and both dates.');
+            bookingDone();
             return;
         }
         if (new Date(checkout) <= new Date(checkin)) {
             showError('bookingsError', 'Check-out must be after check-in.');
+            bookingDone();
             return;
         }
 
@@ -309,10 +448,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (error) {
             showError('bookingsError', 'Failed to add booking.');
+            bookingDone();
             return;
         }
 
-        addBookingForm.style.display = 'none';
+        bookingDone('Added');
+        showToast('Booking added.');
+        closeFormDialog(addBookingForm);
         addBookingForm.reset();
         loadBookings();
     });
@@ -848,23 +990,57 @@ document.addEventListener('DOMContentLoaded', () => {
     const addReviewBtn = document.getElementById('addReviewBtn');
     const cancelReviewBtn = document.getElementById('cancelReviewBtn');
 
+    // Paste a review link and the platform picks itself — one less field to
+    // get wrong, and the two can't disagree.
+    const REVIEW_SOURCE_LABELS = {
+        google: 'Google',
+        airbnb: 'Airbnb',
+        booking_com: 'Booking.com',
+        tripadvisor: 'Tripadvisor',
+        direct: 'Direct',
+    };
+
+    const REVIEW_SOURCE_HOSTS = [
+        ['google.', 'google'],
+        ['goo.gl', 'google'],
+        ['airbnb.', 'airbnb'],
+        ['abnb.me', 'airbnb'],
+        ['booking.com', 'booking_com'],
+        ['tripadvisor.', 'tripadvisor'],
+    ];
+
+    const detectReviewSource = (url) => {
+        const lower = String(url || '').toLowerCase();
+        const hit = REVIEW_SOURCE_HOSTS.find(([needle]) => lower.includes(needle));
+        return hit ? hit[1] : null;
+    };
+
+    const reviewSourceUrlInput = document.getElementById('reviewSourceUrl');
+    if (reviewSourceUrlInput) {
+        reviewSourceUrlInput.addEventListener('input', () => {
+            const detected = detectReviewSource(reviewSourceUrlInput.value);
+            if (detected) document.getElementById('reviewSource').value = detected;
+        });
+    }
+
     const resetReviewForm = () => {
         reviewForm.reset();
         document.getElementById('reviewId').value = '';
         document.getElementById('reviewPublished').checked = true;
+        document.getElementById('reviewSource').value = 'google';
     };
 
     addReviewBtn.addEventListener('click', () => {
         resetReviewForm();
-        reviewForm.style.display = 'block';
+        openFormDialog(reviewForm, 'Add review');
     });
     cancelReviewBtn.addEventListener('click', () => {
-        reviewForm.style.display = 'none';
+        closeFormDialog(reviewForm);
     });
 
     async function loadReviews() {
         hideError('reviewsError');
-        if (!reviewsTableBody.querySelector('tr[data-loaded]')) showTableSkeleton(reviewsTableBody, 6);
+        if (!reviewsTableBody.querySelector('tr[data-loaded]')) showTableSkeleton(reviewsTableBody, 7);
         const { data, error } = await sbClient
             .from('reviews')
             .select('*')
@@ -876,15 +1052,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (!data || data.length === 0) {
-            reviewsTableBody.innerHTML = '<tr><td colspan="6" class="admin-table-empty">No reviews yet.</td></tr>';
+            reviewsTableBody.innerHTML = '<tr><td colspan="7" class="admin-table-empty">No reviews yet.</td></tr>';
             return;
         }
 
         reviewsTableBody.innerHTML = data.map((r) => `
             <tr data-loaded="1">
                 <td>${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</td>
-                <td>${escapeHtml(r.guest_name)}</td>
+                <td>${escapeHtml(r.guest_name)}${r.source_url
+                    ? ` <a href="${escapeHtml(r.source_url)}" target="_blank" rel="noopener" title="Open the original review">&#8599;</a>`
+                    : ''}</td>
                 <td>${r.review_date}</td>
+                <td>${REVIEW_SOURCE_LABELS[r.source] || 'Direct'}</td>
                 <td>${escapeHtml((r.body || '').slice(0, 60))}${r.body && r.body.length > 60 ? '…' : ''}</td>
                 <td>${r.published ? 'Yes' : 'No'}</td>
                 <td>
@@ -921,22 +1100,24 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('reviewRating').value = review.rating || 5;
             document.getElementById('reviewDate').value = review.review_date || '';
             document.getElementById('reviewSourceUrl').value = review.source_url || '';
+            document.getElementById('reviewSource').value = review.source || 'direct';
             document.getElementById('reviewBody').value = review.body || '';
             document.getElementById('reviewPublished').checked = !!review.published;
-            reviewForm.style.display = 'block';
-            reviewForm.scrollIntoView({ behavior: 'smooth' });
+            openFormDialog(reviewForm, 'Edit review');
         }
     });
 
     reviewForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideError('reviewsError');
+        const reviewDone = buttonBusy(reviewForm.querySelector('button[type="submit"]'));
 
         const id = document.getElementById('reviewId').value;
         const payload = {
             guest_name: document.getElementById('reviewGuestName').value,
             rating: parseInt(document.getElementById('reviewRating').value, 10),
             review_date: document.getElementById('reviewDate').value,
+            source: document.getElementById('reviewSource').value,
             source_url: document.getElementById('reviewSourceUrl').value || null,
             body: document.getElementById('reviewBody').value,
             published: document.getElementById('reviewPublished').checked,
@@ -948,10 +1129,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (error) {
             showError('reviewsError', 'Failed to save review.');
+            reviewDone();
             return;
         }
 
-        reviewForm.style.display = 'none';
+        reviewDone('Saved');
+        showToast('Review saved.');
+        closeFormDialog(reviewForm);
         resetReviewForm();
         loadReviews();
     });
@@ -977,12 +1161,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     addFaqBtn.addEventListener('click', () => {
         resetFaqForm();
-        faqForm.style.display = 'block';
-        faqForm.scrollIntoView({ behavior: 'smooth' });
+        openFormDialog(faqForm, 'Add question');
     });
 
     cancelFaqBtn.addEventListener('click', () => {
-        faqForm.style.display = 'none';
+        closeFormDialog(faqForm);
         resetFaqForm();
     });
 
@@ -1076,14 +1259,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('faqQuestion').value = faq.question || '';
             document.getElementById('faqAnswer').value = faq.answer || '';
             document.getElementById('faqPublished').checked = !!faq.published;
-            faqForm.style.display = 'block';
-            faqForm.scrollIntoView({ behavior: 'smooth' });
+            openFormDialog(faqForm, 'Edit question');
         }
     });
 
     faqForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         hideError('faqsError');
+        const faqDone = buttonBusy(faqForm.querySelector('button[type="submit"]'));
 
         const id = document.getElementById('faqId').value;
         const payload = {
@@ -1095,6 +1278,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (!payload.question || !payload.answer) {
             showError('faqsError', 'Both the question and the answer are needed.');
+            faqDone();
             return;
         }
 
@@ -1110,12 +1294,478 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (error) {
             showError('faqsError', 'Failed to save that question.');
+            faqDone();
             return;
         }
 
-        faqForm.style.display = 'none';
+        faqDone('Saved');
+        showToast('Question saved.');
+        closeFormDialog(faqForm);
         resetFaqForm();
         loadFaqs();
+    });
+
+    // ---------- Activities ----------
+
+    // The things-to-do entries behind /activities and the homepage teaser.
+    // Rendered server-side, so edits here show up on the live site once the
+    // page's five-minute cache turns over.
+
+    const activitiesTableBody = document.getElementById('activitiesTableBody');
+    const activityForm = document.getElementById('activityForm');
+    const addActivityBtn = document.getElementById('addActivityBtn');
+    const cancelActivityBtn = document.getElementById('cancelActivityBtn');
+    const activityPhotoInput = document.getElementById('activityPhotoInput');
+    const activityPhotoPreview = document.getElementById('activityPhotoPreview');
+    const activityPhotoStatus = document.getElementById('activityPhotoStatus');
+    const activityFeaturedCount = document.getElementById('activityFeaturedCount');
+    const activityOgInput = document.getElementById('activityOgInput');
+    const activityOgPreview = document.getElementById('activityOgPreview');
+    const activityOgStatus = document.getElementById('activityOgStatus');
+    const activitySlugInput = document.getElementById('activitySlug');
+    const activityViewLink = document.getElementById('activityViewLink');
+    const ACTIVITY_BUCKET = 'activity-images';
+    // The homepage teaser row holds three cards.
+    const MAX_FEATURED = 3;
+
+    let activitiesCache = [];
+    // Photos for the entry being edited, held until the form is saved.
+    let pendingPhoto = { path: null, url: null };
+    let pendingOgImage = { path: null, url: null };
+
+    const slugify = (value) => String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 120);
+
+    // Counts that matter: Google truncates around these lengths, so the hint
+    // turns amber once the text will be cut off.
+    const wireLengthHint = (inputId, labelId, limit) => {
+        const input = document.getElementById(inputId);
+        const label = document.getElementById(labelId);
+        if (!input || !label) return;
+        const update = () => {
+            const n = input.value.trim().length;
+            label.textContent = n === 0 ? '' : `${n} characters${n > limit ? ' — likely to be cut short' : ''}`;
+            label.style.color = n > limit ? '#b45309' : '';
+        };
+        input.addEventListener('input', update);
+        update();
+    };
+    // /api/activity.js marks a page noindex below this, so the page never
+    // competes with the listing on two lines of text. Say so here rather than
+    // letting it be a silent surprise.
+    const THIN_CONTENT_CHARS = 200;
+    const wireBodyHint = () => {
+        const body = document.getElementById('activityDescription');
+        const hint = document.getElementById('activityBodyHint');
+        if (!body || !hint) return;
+        const update = () => {
+            const n = body.value.trim().length;
+            if (n === 0) {
+                hint.textContent = '';
+                hint.style.color = '';
+                return;
+            }
+            const thin = n < THIN_CONTENT_CHARS;
+            hint.textContent = thin
+                ? `${n} characters — its own page stays out of Google until this is past ${THIN_CONTENT_CHARS}. It still shows on the site.`
+                : `${n} characters — enough for its own page to be indexed.`;
+            hint.style.color = thin ? '#b45309' : 'var(--primary-color)';
+        };
+        body.addEventListener('input', update);
+        update();
+    };
+    wireBodyHint();
+
+    wireLengthHint('activitySeoTitle', 'activitySeoTitleCount', 60);
+    wireLengthHint('activitySeoDescription', 'activitySeoDescriptionCount', 160);
+
+    const updateFeaturedCount = () => {
+        if (!activityFeaturedCount) return;
+        const count = activitiesCache.filter((a) => a.featured).length;
+        activityFeaturedCount.textContent = `${count} of ${MAX_FEATURED} on the homepage`;
+    };
+
+    const renderActivityOgImage = () => {
+        if (!activityOgPreview) return;
+        activityOgPreview.innerHTML = pendingOgImage.url
+            ? `<img src="${escapeHtml(pendingOgImage.url)}" alt="">
+               <button type="button" class="admin-btn-delete" id="removeActivityOg">Remove</button>`
+            : '<p class="admin-hint" style="margin:0;">Using the activity photo when shared.</p>';
+    };
+
+    const renderActivityPhoto = () => {
+        if (!activityPhotoPreview) return;
+        activityPhotoPreview.innerHTML = pendingPhoto.url
+            ? `<img src="${escapeHtml(pendingPhoto.url)}" alt="">
+               <button type="button" class="admin-btn-delete" id="removeActivityPhoto">Remove</button>`
+            : '<p class="admin-hint" style="margin:0;">No photo yet — the card shows a coloured placeholder.</p>';
+    };
+
+    const resetActivityForm = () => {
+        activityForm.reset();
+        document.getElementById('activityId').value = '';
+        document.getElementById('activityPublished').checked = true;
+        pendingPhoto = { path: null, url: null };
+        pendingOgImage = { path: null, url: null };
+        activityPhotoStatus.textContent = '';
+        activityOgStatus.textContent = '';
+        if (activitySlugInput) delete activitySlugInput.dataset.touched;
+        if (activityViewLink) activityViewLink.style.display = 'none';
+        renderActivityPhoto();
+        renderActivityOgImage();
+    };
+
+    if (activitySlugInput) {
+        const titleInput = document.getElementById('activityTitle');
+        activitySlugInput.addEventListener('input', () => {
+            activitySlugInput.dataset.touched = 'true';
+            activitySlugInput.value = slugify(activitySlugInput.value);
+        });
+        titleInput.addEventListener('input', () => {
+            if (activitySlugInput.dataset.touched === 'true') return;
+            activitySlugInput.value = slugify(titleInput.value);
+        });
+    }
+
+    addActivityBtn.addEventListener('click', () => {
+        resetActivityForm();
+        openFormDialog(activityForm, 'Add activity');
+    });
+
+    cancelActivityBtn.addEventListener('click', () => {
+        closeFormDialog(activityForm);
+        resetActivityForm();
+    });
+
+    async function loadActivities() {
+        hideError('activitiesError');
+        if (activitiesCache.length === 0) showTableSkeleton(activitiesTableBody, 9);
+
+        const { data, error } = await sbClient
+            .from('activities')
+            .select('*')
+            .order('sort_order', { ascending: true });
+
+        if (error) {
+            showError('activitiesError', 'Failed to load activities.');
+            return;
+        }
+
+        activitiesCache = data || [];
+        updateFeaturedCount();
+
+        if (activitiesCache.length === 0) {
+            activitiesTableBody.innerHTML = '<tr><td colspan="9" class="admin-table-empty">Nothing here yet. Add the first activity above.</td></tr>';
+            return;
+        }
+
+        activitiesTableBody.innerHTML = activitiesCache.map((a, i) => `
+            <tr${a.published ? '' : ' class="admin-row-handled"'}>
+                <td>
+                    <div class="admin-row-actions">
+                        <button class="admin-btn-edit" data-action="up" data-id="${a.id}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">&uarr;</button>
+                        <button class="admin-btn-edit" data-action="down" data-id="${a.id}" ${i === activitiesCache.length - 1 ? 'disabled' : ''} aria-label="Move down">&darr;</button>
+                    </div>
+                </td>
+                <td>${a.image_url
+                    ? `<img class="admin-activity-thumb" src="${escapeHtml(a.image_url)}" alt="">`
+                    : '<span class="admin-activity-thumb admin-activity-thumb-empty"></span>'}</td>
+                <td class="admin-faq-question">${escapeHtml(a.title)}</td>
+                <td>${escapeHtml(a.category)}</td>
+                <td>${a.we_arrange ? 'Bookable' : 'Info only'}</td>
+                <td>${a.kid_friendly ? 'Yes' : '—'}</td>
+                <td>${a.featured ? 'Yes' : '—'}</td>
+                <td>${a.published ? 'Yes' : 'No'}</td>
+                <td>
+                    <div class="admin-row-actions">
+                        <button class="${a.published ? 'admin-btn-edit' : 'admin-btn-confirm'}" data-action="toggle" data-id="${a.id}">${a.published ? 'Hide' : 'Show'}</button>
+                        <button class="admin-btn-edit" data-action="edit" data-id="${a.id}">Edit</button>
+                        ${a.slug ? `<a class="admin-btn-edit" href="/activities/${escapeHtml(a.slug)}" target="_blank" rel="noopener">View</a>` : ''}
+                        <button class="admin-btn-delete" data-action="delete" data-id="${a.id}">Delete</button>
+                    </div>
+                </td>
+            </tr>`).join('');
+    }
+
+    async function moveActivity(id, direction) {
+        const index = activitiesCache.findIndex((a) => a.id === id);
+        const neighbour = activitiesCache[index + direction];
+        if (index === -1 || !neighbour) return;
+
+        const current = activitiesCache[index];
+        const results = await Promise.all([
+            sbClient.from('activities').update({ sort_order: neighbour.sort_order }).eq('id', current.id),
+            sbClient.from('activities').update({ sort_order: current.sort_order }).eq('id', neighbour.id),
+        ]);
+        if (results.some((r) => r.error)) showError('activitiesError', 'Failed to reorder.');
+        loadActivities();
+    }
+
+    activitiesTableBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const id = btn.dataset.id;
+        const action = btn.dataset.action;
+        hideError('activitiesError');
+
+        if (action === 'up' || action === 'down') {
+            btn.disabled = true;
+            await moveActivity(id, action === 'up' ? -1 : 1);
+            return;
+        }
+
+        if (action === 'toggle') {
+            const activity = activitiesCache.find((a) => a.id === id);
+            if (!activity) return;
+            btn.disabled = true;
+            const { error } = await sbClient
+                .from('activities')
+                .update({ published: !activity.published, updated_at: new Date().toISOString() })
+                .eq('id', id);
+            if (error) showError('activitiesError', 'Failed to change that.');
+            else showToast(activity.published ? `"${activity.title}" hidden from the site.` : `"${activity.title}" is live.`);
+            loadActivities();
+            return;
+        }
+
+        if (action === 'delete') {
+            const activity = activitiesCache.find((a) => a.id === id);
+            if (!confirm(`Delete "${activity ? activity.title : 'this activity'}"? This removes it from the site straight away.`)) return;
+            if (activity && activity.image_path) {
+                await sbClient.storage.from(ACTIVITY_BUCKET).remove([activity.image_path]);
+            }
+            const { error } = await sbClient.from('activities').delete().eq('id', id);
+            if (error) showError('activitiesError', 'Failed to delete that activity.');
+            loadActivities();
+            return;
+        }
+
+        if (action === 'edit') {
+            const a = activitiesCache.find((x) => x.id === id);
+            if (!a) return;
+            document.getElementById('activityId').value = a.id;
+            document.getElementById('activityTitle').value = a.title || '';
+            document.getElementById('activityCategory').value = a.category || 'Excursions';
+            document.getElementById('activitySummary').value = a.summary || '';
+            document.getElementById('activityDescription').value = a.description || '';
+            document.getElementById('activityDistance').value = a.distance_text || '';
+            document.getElementById('activityDuration').value = a.duration_text || '';
+            document.getElementById('activityWeArrange').checked = !!a.we_arrange;
+            document.getElementById('activityKidFriendly').checked = !!a.kid_friendly;
+            document.getElementById('activityFeatured').checked = !!a.featured;
+            document.getElementById('activityPublished').checked = !!a.published;
+            document.getElementById('activitySlug').value = a.slug || '';
+            document.getElementById('activitySeoTitle').value = a.seo_title || '';
+            document.getElementById('activitySeoDescription').value = a.seo_description || '';
+            activitySlugInput.dataset.touched = 'true';
+            pendingPhoto = { path: a.image_path || null, url: a.image_url || null };
+            pendingOgImage = { path: null, url: a.og_image_url || null };
+            renderActivityPhoto();
+            renderActivityOgImage();
+            openFormDialog(activityForm, 'Edit activity');
+            document.getElementById('activitySeoTitle').dispatchEvent(new Event('input'));
+            document.getElementById('activitySeoDescription').dispatchEvent(new Event('input'));
+            document.getElementById('activityDescription').dispatchEvent(new Event('input'));
+            if (activityViewLink && a.slug) {
+                activityViewLink.href = `/activities/${a.slug}`;
+                activityViewLink.textContent = 'View page';
+                activityViewLink.style.display = 'inline-flex';
+            }
+        }
+    });
+
+    if (activityPhotoPreview) {
+        activityPhotoPreview.addEventListener('click', (e) => {
+            if (!e.target.closest('#removeActivityPhoto')) return;
+            pendingPhoto = { path: null, url: null };
+            renderActivityPhoto();
+            persistImageNow('image_url', null, 'image_path', null).then((saved) => {
+                activityPhotoStatus.textContent = saved ? 'Photo removed.' : '';
+                if (saved) loadActivities();
+            });
+        });
+    }
+
+    // For an activity that already exists, the image is written to the row as
+    // soon as it uploads. The preview appearing is what a person reads as
+    // "saved", and leaving it pending until the Save button meant a photo
+    // could sit in storage attached to nothing.
+    const persistImageNow = async (column, value, pathColumn, pathValue) => {
+        const id = document.getElementById('activityId').value;
+        if (!id) return false;
+        const patch = { [column]: value, updated_at: new Date().toISOString() };
+        if (pathColumn) patch[pathColumn] = pathValue;
+        const { error } = await sbClient.from('activities').update(patch).eq('id', id);
+        if (error) {
+            showError('activitiesError', 'The image uploaded but could not be attached — press Save to try again.');
+            return false;
+        }
+        const cached = activitiesCache.find((a) => a.id === id);
+        if (cached) Object.assign(cached, patch);
+        return true;
+    };
+
+    activityPhotoInput.addEventListener('change', async () => {
+        const file = activityPhotoInput.files[0];
+        if (!file) return;
+
+        hideError('activitiesError');
+        activityPhotoStatus.textContent = 'Preparing photo…';
+
+        const prepared = await prepareImageForUpload(file);
+        activityPhotoStatus.textContent = 'Uploading…';
+
+        const path = `${Date.now()}-${prepared.name}`;
+        const { error: uploadError } = await sbClient.storage
+            .from(ACTIVITY_BUCKET)
+            .upload(path, prepared.file, { contentType: prepared.file.type });
+
+        activityPhotoInput.value = '';
+
+        if (uploadError) {
+            activityPhotoStatus.textContent = '';
+            showError('activitiesError', 'Photo upload failed.');
+            return;
+        }
+
+        const { data } = sbClient.storage.from(ACTIVITY_BUCKET).getPublicUrl(path);
+        pendingPhoto = { path, url: data.publicUrl };
+        renderActivityPhoto();
+
+        const saved = await persistImageNow('image_url', data.publicUrl, 'image_path', path);
+        activityPhotoStatus.textContent = saved
+            ? `Photo saved. ${prepared.note}`
+            : `Photo ready — press Save activity to keep it. ${prepared.note}`;
+        if (saved) {
+            showToast('Photo saved.');
+            loadActivities();
+        }
+    });
+
+    if (activityOgPreview) {
+        activityOgPreview.addEventListener('click', (e) => {
+            if (!e.target.closest('#removeActivityOg')) return;
+            pendingOgImage = { path: null, url: null };
+            renderActivityOgImage();
+            persistImageNow('og_image_url', null).then((saved) => {
+                activityOgStatus.textContent = saved ? 'Share image removed.' : '';
+            });
+        });
+    }
+
+    if (activityOgInput) {
+        activityOgInput.addEventListener('change', async () => {
+            const file = activityOgInput.files[0];
+            if (!file) return;
+
+            hideError('activitiesError');
+            activityOgStatus.textContent = 'Preparing image…';
+            const prepared = await prepareImageForUpload(file);
+            activityOgStatus.textContent = 'Uploading…';
+
+            const path = `og-${Date.now()}-${prepared.name}`;
+            const { error } = await sbClient.storage
+                .from(ACTIVITY_BUCKET)
+                .upload(path, prepared.file, { contentType: prepared.file.type });
+
+            activityOgInput.value = '';
+
+            if (error) {
+                activityOgStatus.textContent = '';
+                showError('activitiesError', 'Share image upload failed.');
+                return;
+            }
+
+            const { data } = sbClient.storage.from(ACTIVITY_BUCKET).getPublicUrl(path);
+            pendingOgImage = { path, url: data.publicUrl };
+            renderActivityOgImage();
+
+            const saved = await persistImageNow('og_image_url', data.publicUrl);
+            activityOgStatus.textContent = saved
+                ? `Share image saved. ${prepared.note}`
+                : `Share image ready — press Save activity to keep it. ${prepared.note}`;
+            if (saved) showToast('Share image saved.');
+        });
+    }
+
+    activityForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError('activitiesError');
+        const activityDone = buttonBusy(activityForm.querySelector('button[type="submit"]'));
+
+        const id = document.getElementById('activityId').value;
+        const featured = document.getElementById('activityFeatured').checked;
+
+        if (featured) {
+            const others = activitiesCache.filter((a) => a.featured && a.id !== id).length;
+            if (others >= MAX_FEATURED) {
+                showError('activitiesError', `The homepage row holds ${MAX_FEATURED} activities — untick one before featuring another.`);
+                activityDone();
+            return;
+            }
+        }
+
+        const payload = {
+            title: document.getElementById('activityTitle').value.trim(),
+            category: document.getElementById('activityCategory').value,
+            summary: document.getElementById('activitySummary').value.trim(),
+            description: document.getElementById('activityDescription').value.trim(),
+            distance_text: document.getElementById('activityDistance').value.trim() || null,
+            duration_text: document.getElementById('activityDuration').value.trim() || null,
+            we_arrange: document.getElementById('activityWeArrange').checked,
+            kid_friendly: document.getElementById('activityKidFriendly').checked,
+            featured,
+            published: document.getElementById('activityPublished').checked,
+            slug: slugify(document.getElementById('activitySlug').value || document.getElementById('activityTitle').value),
+            seo_title: document.getElementById('activitySeoTitle').value.trim() || null,
+            seo_description: document.getElementById('activitySeoDescription').value.trim() || null,
+            og_image_url: pendingOgImage.url,
+            image_path: pendingPhoto.path,
+            image_url: pendingPhoto.url,
+            updated_at: new Date().toISOString(),
+        };
+
+        if (!payload.title) {
+            showError('activitiesError', 'An activity needs a name.');
+            activityDone();
+            return;
+        }
+
+        // Replacing a photo leaves the old file behind, so clear it once the
+        // new one is safely saved.
+        const previous = activitiesCache.find((a) => a.id === id);
+        const orphan = previous && previous.image_path && previous.image_path !== pendingPhoto.path
+            ? previous.image_path
+            : null;
+
+        if (!id) {
+            const highest = activitiesCache.reduce((max, a) => Math.max(max, a.sort_order || 0), -1);
+            payload.sort_order = highest + 1;
+        }
+
+        const { error } = id
+            ? await sbClient.from('activities').update(payload).eq('id', id)
+            : await sbClient.from('activities').insert(payload);
+
+        if (error) {
+            const clash = String(error.message || '').includes('activities_slug_key');
+            showError('activitiesError', clash
+                ? `The page address "${payload.slug}" is already used by another activity — give this one a different address.`
+                : 'Failed to save that activity.');
+            activityDone();
+            return;
+        }
+
+        if (orphan) await sbClient.storage.from(ACTIVITY_BUCKET).remove([orphan]);
+
+        activityDone('Saved');
+        showToast('Activity saved.');
+        closeFormDialog(activityForm);
+        resetActivityForm();
+        loadActivities();
     });
 
     // ---------- Gallery ----------
@@ -1352,6 +2002,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let nextOrder = galleryCache.reduce((max, img) => Math.max(max, img.sort_order || 0), -1) + 1;
         const failed = [...rejected];
         let uploaded = 0;
+        let savedBytes = 0;
 
         for (const [index, file] of accepted.entries()) {
             setUploadProgress(
@@ -1362,12 +2013,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     : `Uploading ${file.name}…`
             );
 
-            const path = `${Date.now()}-${index}-${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
-            const { error: uploadError } = await sbClient.storage.from(GALLERY_BUCKET).upload(path, file);
+            // Resized in the browser first — see prepareImageForUpload.
+            const prepared = await prepareImageForUpload(file);
+            const path = `${Date.now()}-${index}-${prepared.name}`;
+            const { error: uploadError } = await sbClient.storage
+                .from(GALLERY_BUCKET)
+                .upload(path, prepared.file, { contentType: prepared.file.type });
             if (uploadError) {
                 failed.push(`${file.name} (upload failed)`);
                 continue;
             }
+            savedBytes += file.size - prepared.file.size;
 
             const { data: publicUrlData } = sbClient.storage.from(GALLERY_BUCKET).getPublicUrl(path);
             const { error: insertError } = await sbClient.from('gallery_images').insert({
@@ -1391,7 +2047,8 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(clearUploadProgress, 600);
 
         if (uploaded > 0) {
-            showToast(`${uploaded} photo${uploaded === 1 ? '' : 's'} uploaded.`);
+            const saved = savedBytes > 64 * 1024 ? ` (${Math.round(savedBytes / 1024)} KB saved by resizing)` : '';
+            showToast(`${uploaded} photo${uploaded === 1 ? '' : 's'} uploaded.${saved}`);
         }
 
         if (failed.length > 0) {
@@ -1544,6 +2201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         hideError('seoError');
         if (seoSaveStatus) seoSaveStatus.textContent = '';
+        const seoDone = buttonBusy(seoForm.querySelector('button[type="submit"]'));
 
         const payload = { updated_at: new Date().toISOString() };
         for (const [elementId, column, type] of SEO_FIELDS) {
@@ -1561,14 +2219,17 @@ document.addEventListener('DOMContentLoaded', () => {
         // These two are the page's own title and description — never blank.
         if (!payload.seo_title || !payload.seo_description) {
             showError('seoError', 'The page title and meta description are both needed.');
+            seoDone();
             return;
         }
 
         const { error } = await sbClient.from('site_settings').update(payload).eq('id', 1);
         if (error) {
             showError('seoError', 'Failed to save SEO settings.');
+            seoDone();
             return;
         }
+        seoDone('Saved');
         if (seoSaveStatus) seoSaveStatus.textContent = 'Saved. The live site picks this up within about 5 minutes.';
     });
 });

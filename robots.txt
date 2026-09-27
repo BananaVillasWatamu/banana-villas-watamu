@@ -1,6 +1,26 @@
+# Banana Villas Watamu
+# Guests and search engines are welcome everywhere except the dashboard and
+# the API. AI crawlers are welcome too — see /llms.txt for a summary written
+# for them.
+
 User-agent: *
 Allow: /
+
+# The dashboard and the endpoints behind it: nothing here is for readers.
 Disallow: /admin.html
 Disallow: /api/
+
+# The same homepage with a tracking or activity tag on the end. The canonical
+# tag already points these back to /, this keeps them out of the crawl budget.
+Disallow: /*?activity=
+Disallow: /*?utm_
+Disallow: /*?fbclid=
+Disallow: /*?gclid=
+
+# Templates are served through the API with their placeholders filled in;
+# the raw files are not pages.
+Disallow: /home.template.html
+Disallow: /activities.template.html
+Disallow: /activity.template.html
 
 Sitemap: https://www.bananavillaswatamu.com/sitemap.xml

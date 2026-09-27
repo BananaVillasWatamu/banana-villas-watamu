@@ -7,6 +7,8 @@
     <title>{{SEO_TITLE}}</title>
     <meta name="description" content="{{SEO_DESCRIPTION}}">
     <meta name="robots" content="index, follow">
+    <!-- Every ?activity= / ?utm_ variant of this URL is the same page. -->
+    <link rel="canonical" href="https://www.bananavillaswatamu.com/">
 
     <!-- Open Graph / Social Sharing -->
     <meta property="og:type" content="website">
@@ -41,6 +43,7 @@
                 <a href="#gallery">Gallery</a>
                 <a href="#about">About</a>
                 <a href="#amenities">Amenities</a>
+                <a href="/activities">Activities</a>
                 <a href="#contact" class="btn-primary nav-btn">Book Now</a>
             </nav>
             <button class="mobile-menu-btn" aria-label="Toggle menu">
@@ -233,6 +236,11 @@
                 </ul>
             </div>
         </section>
+
+        <!-- Activities teaser — the featured entries, rendered server-side by
+             /api/index.js. The whole block is dropped when nothing is
+             featured, so the homepage never shows an empty shelf. -->
+{{ACTIVITY_TEASER}}
 
         <!-- Testimonials Section -->
         <section id="testimonials" class="section">
@@ -548,6 +556,7 @@
                     <a href="#gallery">Gallery</a>
                     <a href="#about">About</a>
                     <a href="#amenities">Amenities</a>
+                    <a href="/activities">Activities</a>
                     <a href="#testimonials">Reviews</a>
                     <a href="#faq">FAQ</a>
                     <a href="#contact">Contact</a>

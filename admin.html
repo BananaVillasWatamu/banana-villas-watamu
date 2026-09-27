@@ -51,6 +51,7 @@
                 <button class="admin-tab" data-tab="enquiries">Enquiries<span id="enquiriesTabBadge" class="admin-tab-badge" hidden></span></button>
                 <button class="admin-tab" data-tab="reviews">Reviews</button>
                 <button class="admin-tab" data-tab="faqs">FAQs</button>
+                <button class="admin-tab" data-tab="activities">Activities</button>
                 <button class="admin-tab" data-tab="gallery">Gallery</button>
                 <button class="admin-tab" data-tab="seo">SEO</button>
             </nav>
@@ -127,7 +128,14 @@
                 <div id="bookingsError" class="form-error-banner" style="display:none;"></div>
 
                 <!-- Add booking -->
-                <form id="addBookingForm" class="admin-form" style="display:none;">
+                <dialog class="admin-dialog" id="bookingDialog" aria-labelledby="bookingDialogTitle">
+                    <div class="admin-dialog-panel">
+                        <header class="admin-dialog-header">
+                            <h3 id="bookingDialogTitle">Add booking</h3>
+                            <button type="button" class="admin-dialog-close" data-close-dialog
+                                aria-label="Close">&times;</button>
+                        </header>
+                        <form id="addBookingForm" class="admin-form">
                     <p class="admin-hint">For bookings taken by phone, walk-in, or anywhere off-site. It's saved as
                         confirmed right away and immediately blocks those dates.</p>
                     <div class="form-row">
@@ -173,6 +181,8 @@
                         <button type="button" id="cancelAddBookingBtn" class="admin-btn-secondary">Cancel</button>
                     </div>
                 </form>
+                    </div>
+                </dialog>
 
                 <!-- Calendar + Date details, side by side -->
                 <div class="admin-bookings-top-row">
@@ -349,7 +359,14 @@
                 </div>
                 <div id="reviewsError" class="form-error-banner" style="display:none;"></div>
 
-                <form id="reviewForm" class="admin-form" style="display:none;">
+                <dialog class="admin-dialog" id="reviewDialog" aria-labelledby="reviewDialogTitle">
+                    <div class="admin-dialog-panel">
+                        <header class="admin-dialog-header">
+                            <h3 id="reviewDialogTitle">Add review</h3>
+                            <button type="button" class="admin-dialog-close" data-close-dialog
+                                aria-label="Close">&times;</button>
+                        </header>
+                        <form id="reviewForm" class="admin-form">
                     <input type="hidden" id="reviewId">
                     <div class="form-row">
                         <div class="form-group">
@@ -373,8 +390,24 @@
                             <input type="date" id="reviewDate" required>
                         </div>
                         <div class="form-group">
-                            <label for="reviewSourceUrl">Source link <span class="optional">(optional)</span></label>
-                            <input type="url" id="reviewSourceUrl" placeholder="https://airbnb.com/...">
+                            <label for="reviewSource">Left on</label>
+                            <select id="reviewSource">
+                                <option value="google">Google</option>
+                                <option value="airbnb">Airbnb</option>
+                                <option value="booking_com">Booking.com</option>
+                                <option value="tripadvisor">Tripadvisor</option>
+                                <option value="direct">Sent to us directly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="reviewSourceUrl">Link to the review <span class="optional">(optional)</span></label>
+                            <input type="url" id="reviewSourceUrl"
+                                placeholder="https://www.google.com/maps/... or https://airbnb.com/...">
+                            <p class="admin-hint" style="margin:0.35rem 0 0;">Paste the link and the platform above is
+                                filled in for you. With a link the badge on the site becomes clickable, so guests can
+                                check the review is real.</p>
                         </div>
                     </div>
                     <div class="form-group">
@@ -390,6 +423,8 @@
                         <button type="button" id="cancelReviewBtn" class="admin-btn-secondary">Cancel</button>
                     </div>
                 </form>
+                    </div>
+                </dialog>
 
                 <div class="admin-table-wrap">
                     <table class="admin-table">
@@ -398,6 +433,7 @@
                                 <th>Rating</th>
                                 <th>Guest</th>
                                 <th>Date</th>
+                                <th>Left on</th>
                                 <th>Review</th>
                                 <th>Published</th>
                                 <th>Actions</th>
@@ -405,7 +441,7 @@
                         </thead>
                         <tbody id="reviewsTableBody">
                             <tr>
-                                <td colspan="6" class="admin-table-empty">Loading…</td>
+                                <td colspan="7" class="admin-table-empty">Loading…</td>
                             </tr>
                         </tbody>
                     </table>
@@ -422,7 +458,14 @@
                 <p class="admin-hint">These are the questions shown in the FAQ section of the site, in this order.
                     Unpublished questions stay here but disappear from the public page.</p>
 
-                <form id="faqForm" class="admin-form" style="display:none;">
+                <dialog class="admin-dialog" id="faqDialog" aria-labelledby="faqDialogTitle">
+                    <div class="admin-dialog-panel">
+                        <header class="admin-dialog-header">
+                            <h3 id="faqDialogTitle">Add question</h3>
+                            <button type="button" class="admin-dialog-close" data-close-dialog
+                                aria-label="Close">&times;</button>
+                        </header>
+                        <form id="faqForm" class="admin-form">
                     <input type="hidden" id="faqId">
                     <div class="form-group">
                         <label for="faqQuestion">Question</label>
@@ -443,6 +486,8 @@
                         <button type="button" id="cancelFaqBtn" class="admin-btn-secondary">Cancel</button>
                     </div>
                 </form>
+                    </div>
+                </dialog>
 
                 <div class="admin-table-wrap">
                     <table class="admin-table">
@@ -464,7 +509,180 @@
                 </div>
             </section>
 
+            <!-- Activities -->
+            <section id="tab-activities" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>Activities</h2>
+                    <div class="admin-panel-actions">
+                        <span id="activityFeaturedCount" class="admin-sync-status"></span>
+                        <button id="addActivityBtn" class="admin-btn-secondary">+ Add activity</button>
+                    </div>
+                </div>
+                <div id="activitiesError" class="form-error-banner" style="display:none;"></div>
+                <p class="admin-hint">What's on the <a href="/activities" target="_blank" rel="noopener">Things to do
+                        in Watamu</a> page, in this order. Cards show the short line only; the full description
+                    appears on the activity's own page. Tick <strong>Bookable</strong> where guests can come to you
+                    and the card gets a booking button — leave it off and it's a recommendation with no button at
+                    all. Tick <strong>Feature on homepage</strong> on up to three. No prices anywhere: enquiries land
+                    in the Enquiries tab with the activity name on them.</p>
+
+                <dialog class="admin-dialog" id="activityDialog" aria-labelledby="activityDialogTitle">
+                    <div class="admin-dialog-panel">
+                        <header class="admin-dialog-header">
+                            <h3 id="activityDialogTitle">Add activity</h3>
+                            <button type="button" class="admin-dialog-close" data-close-dialog
+                                aria-label="Close">&times;</button>
+                        </header>
+                        <form id="activityForm" class="admin-form">
+                    <input type="hidden" id="activityId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="activityTitle">Name</label>
+                            <input type="text" id="activityTitle" maxlength="160" required
+                                placeholder="e.g. Snorkelling in the marine park">
+                        </div>
+                        <div class="form-group">
+                            <label for="activityCategory">Category</label>
+                            <input type="text" id="activityCategory" list="activityCategoryOptions" maxlength="60"
+                                required placeholder="Pick one or type a new one">
+                            <datalist id="activityCategoryOptions">
+                                <option>Beach</option>
+                                <option>Watersports</option>
+                                <option>Bike Hire</option>
+                                <option>Excursions</option>
+                                <option>Restaurants</option>
+                                <option>Spa &amp; Beauty</option>
+                                <option>Wellness</option>
+                                <option>Nightlife</option>
+                                <option>Culture</option>
+                            </datalist>
+                            <p class="admin-hint" style="margin:0.35rem 0 0;">Type anything — a new category becomes a
+                                filter on the page automatically.</p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="activitySummary">Short line for the card</label>
+                        <input type="text" id="activitySummary" maxlength="400"
+                            placeholder="One sentence a guest reads at a glance.">
+                    </div>
+                    <div class="form-group">
+                        <label for="activityDescription">Full description</label>
+                        <textarea id="activityDescription" rows="4" maxlength="4000"
+                            placeholder="What it is, what to expect, anything useful to know."></textarea>
+                        <p id="activityBodyHint" class="admin-sync-status"></p>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="activityDistance">Distance <span class="optional">(optional)</span></label>
+                            <input type="text" id="activityDistance" maxlength="80" placeholder="e.g. 5 min walk">
+                        </div>
+                        <div class="form-group">
+                            <label for="activityDuration">How long <span class="optional">(optional)</span></label>
+                            <input type="text" id="activityDuration" maxlength="80" placeholder="e.g. Half day">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Photo</label>
+                        <div id="activityPhotoPreview" class="admin-activity-preview"></div>
+                        <label class="admin-btn-secondary admin-upload-btn" style="align-self:flex-start;">
+                            Choose photo
+                            <input type="file" id="activityPhotoInput" accept="image/*" hidden>
+                        </label>
+                        <p id="activityPhotoStatus" class="admin-sync-status"></p>
+                    </div>
+
+                    <label class="admin-check-inline">
+                        <input type="checkbox" id="activityWeArrange"> Guests can book this through us
+                        <span class="optional">(adds a "Book through us" button — leave it off for somewhere
+                            you're only recommending, like the beach)</span>
+                    </label>
+                    <label class="admin-check-inline">
+                        <input type="checkbox" id="activityKidFriendly"> Good with kids
+                        <span class="optional">(adds it to the "Good with kids" filter)</span>
+                    </label>
+                    <label class="admin-check-inline">
+                        <input type="checkbox" id="activityFeatured"> Feature on homepage
+                    </label>
+                    <div class="form-check">
+                        <input type="checkbox" id="activityPublished" checked>
+                        <label for="activityPublished">Published (visible on the public site)</label>
+                    </div>
+
+                    <h3 class="admin-form-heading">Search &amp; social</h3>
+                    <p class="admin-hint">Each activity has its own page at <code>/activities/&lt;address&gt;</code>.
+                        Leave any of these blank and it falls back to the name, the short line and the photo above.</p>
+
+                    <div class="form-group">
+                        <label for="activitySlug">Page address</label>
+                        <div class="admin-slug-field">
+                            <span>/activities/</span>
+                            <input type="text" id="activitySlug" maxlength="120" placeholder="gede-ruins">
+                        </div>
+                        <p class="admin-hint" style="margin:0.35rem 0 0;">Filled in from the name as you type. Changing
+                            it later breaks any link already shared.</p>
+                    </div>
+                    <div class="form-group">
+                        <label for="activitySeoTitle">Search title <span class="optional">(aim for under 60
+                                characters)</span></label>
+                        <input type="text" id="activitySeoTitle" maxlength="200"
+                            placeholder="Gede Ruins | Things to do in Watamu">
+                        <p id="activitySeoTitleCount" class="admin-sync-status"></p>
+                    </div>
+                    <div class="form-group">
+                        <label for="activitySeoDescription">Search &amp; social description <span class="optional">(aim
+                                for under 160 characters)</span></label>
+                        <textarea id="activitySeoDescription" rows="2" maxlength="400"
+                            placeholder="What someone sees under the link in Google and on WhatsApp."></textarea>
+                        <p id="activitySeoDescriptionCount" class="admin-sync-status"></p>
+                    </div>
+                    <div class="form-group">
+                        <label>Social share image <span class="optional">(optional — defaults to the photo
+                                above)</span></label>
+                        <div id="activityOgPreview" class="admin-activity-preview"></div>
+                        <label class="admin-btn-secondary admin-upload-btn" style="align-self:flex-start;">
+                            Choose share image
+                            <input type="file" id="activityOgInput" accept="image/*" hidden>
+                        </label>
+                        <p id="activityOgStatus" class="admin-sync-status"></p>
+                    </div>
+
+                    <div class="form-actions admin-form-actions">
+                        <button type="submit" class="btn-primary">Save activity</button>
+                        <button type="button" id="cancelActivityBtn" class="admin-btn-secondary">Cancel</button>
+                        <a id="activityViewLink" class="admin-btn-secondary" target="_blank" rel="noopener"
+                            style="display:none;">View page</a>
+                    </div>
+                </form>
+                    </div>
+                </dialog>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Photo</th>
+                                <th>Name</th>
+                                <th>Category</th>
+                                <th>Bookable</th>
+                                <th>Kids</th>
+                                <th>Homepage</th>
+                                <th>Published</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="activitiesTableBody">
+                            <tr>
+                                <td colspan="9" class="admin-table-empty">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <!-- Gallery -->
+
 
             <section id="tab-gallery" class="admin-panel">
                 <div class="admin-panel-header">

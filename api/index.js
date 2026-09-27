@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { getSupabaseAdmin } = require('./_lib/supabaseAdmin');
 const { buildBusinessSchema } = require('./_lib/businessSchema');
+const { fetchActivities, renderTeaser } = require('./_lib/activities');
 
 const templatePath = path.join(__dirname, '..', 'home.template.html');
 
@@ -38,6 +39,10 @@ module.exports = async (req, res) => {
   const ogDescription = settings?.og_description || description;
   const ogImage = settings?.og_image_url || DEFAULTS.og_image_url;
 
+  // Featured activities for the teaser row. Rendered here rather than in the
+  // browser so the section is in the HTML with everything else.
+  const featured = await fetchActivities({ featuredOnly: true, limit: 3 });
+
   let html;
   try {
     html = fs.readFileSync(templatePath, 'utf8');
@@ -48,6 +53,7 @@ module.exports = async (req, res) => {
   }
 
   html = html
+    .split('{{ACTIVITY_TEASER}}').join(renderTeaser(featured))
     .split('{{BUSINESS_SCHEMA}}').join(buildBusinessSchema(settings, ogImage))
     .split('{{SEO_TITLE}}').join(escapeHtml(title))
     .split('{{SEO_DESCRIPTION}}').join(escapeHtml(description))

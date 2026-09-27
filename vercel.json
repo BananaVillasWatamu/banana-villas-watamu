@@ -1,14 +1,49 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/api/index" }
+    {
+      "source": "/",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/activities",
+      "destination": "/api/activities"
+    },
+    {
+      "source": "/activities/:slug",
+      "destination": "/api/activity?slug=:slug"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/seo?kind=sitemap"
+    },
+    {
+      "source": "/llms.txt",
+      "destination": "/api/seo?kind=llms"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/api/seo?kind=not-found"
+    }
   ],
   "crons": [
-    { "path": "/api/cron/expire-holds", "schedule": "0 3 * * *" },
-    { "path": "/api/cron/sync-ical", "schedule": "15 3 * * *" }
+    {
+      "path": "/api/cron/expire-holds",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/sync-ical",
+      "schedule": "15 3 * * *"
+    }
   ],
   "functions": {
     "api/index.js": {
       "includeFiles": "home.template.html"
+    },
+    "api/activities.js": {
+      "includeFiles": "activities.template.html"
+    },
+    "api/activity.js": {
+      "includeFiles": "activity.template.html"
     }
   }
 }
