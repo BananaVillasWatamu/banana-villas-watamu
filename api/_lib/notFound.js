@@ -6,9 +6,13 @@
 // noindex so the page itself never gets indexed. It also offers a way onward —
 // a dead end on a booking site is a lost guest.
 
+// whatsappUrl is passed in rather than fetched here: this renders on the
+// catch-all route, which should stay cheap, and the caller already has the
+// contact methods in hand. Falls back to the built-in number when it doesn't.
 function renderNotFound({
   heading = "We can't find that page",
   message = 'It may have been renamed, or the link may be incomplete.',
+  whatsappUrl = 'https://wa.me/254715257111',
 } = {}) {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -51,7 +55,7 @@ function renderNotFound({
             </nav>
 
             <p class="notfound-help">Still stuck? Message us on
-                <a href="https://wa.me/254715257111" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                <a href="${whatsappUrl}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
                 and we'll point you the right way.</p>
         </div>
     </main>

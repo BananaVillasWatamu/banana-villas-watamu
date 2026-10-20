@@ -6,6 +6,7 @@
 // back under the limit. Nothing about the output changed.
 
 const { getSupabaseAdmin } = require('./supabaseAdmin');
+const { fetchContactMethods, primary, prettyPhone } = require('./contactMethods');
 
 const SITE = 'https://www.bananavillaswatamu.com';
 
@@ -126,6 +127,15 @@ async function buildLlmsTxt() {
     console.error('llms.txt query failed', err);
   }
 
+  // The same numbers the contact section shows, so an assistant quoting this
+  // file can't hand a guest a number the site has since stopped using.
+  const contacts = await fetchContactMethods();
+  const contactLine = [
+    primary(contacts, 'email'),
+    `WhatsApp ${prettyPhone(primary(contacts, 'whatsapp'))}`,
+    `phone ${prettyPhone(primary(contacts, 'phone'))}`,
+  ].join(', ');
+
   const lines = [
     '# Banana Villas Watamu',
     '',
@@ -136,7 +146,7 @@ async function buildLlmsTxt() {
     '- Sleeps up to 8 guests comfortably across 3 bedrooms (bookings accepted for up to 10 guests)',
     '- Amenities: private pool, high-speed WiFi, air conditioning, fully equipped kitchen, backup generator, secure parking, BBQ grill, beach access; private chef and airport transfer available on request',
     '- Nearest airports: Malindi (MYD), ~20 min drive; Mombasa (MBA), ~1.5-2 hr drive',
-    '- Contact: contact@bananavillaswatamu.com, WhatsApp/phone +254 715 257 111',
+    `- Contact: ${contactLine}`,
     `- Map: ${SITE}/#location`,
     '',
     '## Booking',

@@ -2,8 +2,9 @@
 -- Paste the whole thing into the Supabase SQL editor and press Run.
 -- Everything here is idempotent: running it twice is harmless.
 --
--- Covers: the enquiry log, editable FAQs, the header slider flag, and the
--- editable business details behind the site's structured data.
+-- Covers: the enquiry log, editable FAQs, the header slider flag, the
+-- editable business details behind the site's structured data, and the
+-- editable phone numbers and email addresses.
 
 
 -- ===========================================================
@@ -139,3 +140,45 @@ update site_settings set
   maps_url = coalesce(maps_url, 'https://maps.app.goo.gl/CpwYLHs1epv3yJTHA'),
   number_of_rooms = coalesce(number_of_rooms, 3)
 where id = 1;
+
+
+-- ===========================================================
+-- 5. phone numbers & emails  (from supabase/migration-contact-methods.sql)
+-- ===========================================================
+
+create table if not exists contact_methods (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('phone', 'whatsapp', 'email')),
+  label text not null default '' check (char_length(label) <= 60),
+  value text not null check (char_length(value) between 1 and 200),
+  is_primary boolean not null default false,
+  sort_order int not null default 0,
+  visible boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create unique index if not exists contact_methods_one_primary_per_kind
+  on contact_methods (kind)
+  where is_primary;
+
+alter table contact_methods enable row level security;
+
+drop policy if exists "public read visible contact methods" on contact_methods;
+create policy "public read visible contact methods"
+  on contact_methods for select
+  using (visible = true);
+
+drop policy if exists "authenticated manage contact methods" on contact_methods;
+create policy "authenticated manage contact methods"
+  on contact_methods for all
+  using (auth.role() = 'authenticated')
+  with check (auth.role() = 'authenticated');
+
+insert into contact_methods (kind, label, value, is_primary, sort_order)
+select * from (values
+  ('phone',    '',  '+254715257111',                  true,  0),
+  ('whatsapp', '',  '+254715257111',                  true,  1),
+  ('email',    '',  'contact@bananavillaswatamu.com', true,  2)
+) as seed(kind, label, value, is_primary, sort_order)
+where not exists (select 1 from contact_methods);

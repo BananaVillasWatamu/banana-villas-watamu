@@ -130,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFaqs();
         loadActivities();
         loadGallery();
+        loadContactMethods();
         loadSeoSettings();
         loadIcalSettings();
     };
@@ -1638,6 +1639,221 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFaqs();
     });
 
+    // ---------- Contact methods ----------
+
+    // The phone numbers and email addresses in the Contact section. The row
+    // flagged primary for its type is also what the floating WhatsApp button,
+    // the booking form hand-off and Google's structured data use, so there can
+    // only be one per type — the database enforces that with a partial unique
+    // index, and clearing the old one before setting the new one keeps the
+    // dashboard from walking into it.
+
+    const contactTableBody = document.getElementById('contactTableBody');
+    const contactForm = document.getElementById('contactForm');
+    const addContactBtn = document.getElementById('addContactBtn');
+    const cancelContactBtn = document.getElementById('cancelContactBtn');
+
+    const CONTACT_KIND_LABELS = { phone: 'Phone', whatsapp: 'WhatsApp', email: 'Email' };
+
+    let contactCache = [];
+
+    const resetContactForm = () => {
+        contactForm.reset();
+        document.getElementById('contactId').value = '';
+        document.getElementById('contactVisible').checked = true;
+        document.getElementById('contactIsPrimary').checked = false;
+    };
+
+    addContactBtn.addEventListener('click', () => {
+        resetContactForm();
+        openFormDialog(contactForm, 'Add contact');
+    });
+
+    cancelContactBtn.addEventListener('click', () => {
+        closeFormDialog(contactForm);
+        resetContactForm();
+    });
+
+    async function loadContactMethods() {
+        hideError('contactError');
+        if (contactCache.length === 0) showTableSkeleton(contactTableBody, 7);
+        const { data, error } = await sbClient
+            .from('contact_methods')
+            .select('*')
+            .order('sort_order', { ascending: true });
+
+        if (error) {
+            showError('contactError', 'Failed to load contact details.');
+            return;
+        }
+
+        contactCache = data || [];
+
+        if (contactCache.length === 0) {
+            contactTableBody.innerHTML = '<tr><td colspan="7" class="admin-table-empty">No contact details yet. Add the first one above.</td></tr>';
+            return;
+        }
+
+        contactTableBody.innerHTML = contactCache.map((c, i) => `
+            <tr>
+                <td>
+                    <div class="admin-row-actions">
+                        <button class="admin-btn-edit" data-action="up" data-id="${c.id}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">&uarr;</button>
+                        <button class="admin-btn-edit" data-action="down" data-id="${c.id}" ${i === contactCache.length - 1 ? 'disabled' : ''} aria-label="Move down">&darr;</button>
+                    </div>
+                </td>
+                <td>${escapeHtml(CONTACT_KIND_LABELS[c.kind] || c.kind)}</td>
+                <td>${escapeHtml(c.label || '—')}</td>
+                <td>${escapeHtml(c.value)}</td>
+                <td>${c.is_primary ? 'Yes' : 'No'}</td>
+                <td>${c.visible ? 'Yes' : 'No'}</td>
+                <td>
+                    <div class="admin-row-actions">
+                        <button class="admin-btn-edit" data-action="edit" data-id="${c.id}">Edit</button>
+                        <button class="admin-btn-delete" data-action="delete" data-id="${c.id}">Delete</button>
+                    </div>
+                </td>
+            </tr>`).join('');
+    }
+
+    async function moveContact(id, direction) {
+        const index = contactCache.findIndex((c) => c.id === id);
+        const neighbour = contactCache[index + direction];
+        if (!neighbour) return;
+
+        const current = contactCache[index];
+        const results = await Promise.all([
+            sbClient.from('contact_methods').update({ sort_order: neighbour.sort_order, updated_at: new Date().toISOString() }).eq('id', current.id),
+            sbClient.from('contact_methods').update({ sort_order: current.sort_order, updated_at: new Date().toISOString() }).eq('id', neighbour.id),
+        ]);
+
+        if (results.some((r) => r.error)) {
+            showError('contactError', 'Failed to reorder the contact details.');
+        }
+        loadContactMethods();
+    }
+
+    contactTableBody.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const { action, id } = btn.dataset;
+
+        if (action === 'up' || action === 'down') {
+            await moveContact(id, action === 'up' ? -1 : 1);
+            return;
+        }
+
+        if (action === 'delete') {
+            const entry = contactCache.find((c) => c.id === id);
+            // Deleting the primary leaves the WhatsApp button and the
+            // structured data falling back to the next entry of that type, or
+            // to the site's built-in number if there isn't one. Worth saying
+            // out loud rather than discovering on the live site.
+            const warning = entry?.is_primary
+                ? `Delete ${entry.value}? It is the primary ${CONTACT_KIND_LABELS[entry.kind] || entry.kind} — the site will fall back to another entry of that type.`
+                : 'Delete this contact detail?';
+            if (!confirm(warning)) return;
+
+            const { error } = await sbClient.from('contact_methods').delete().eq('id', id);
+            if (error) showError('contactError', 'Failed to delete that contact detail.');
+            loadContactMethods();
+            return;
+        }
+
+        if (action === 'edit') {
+            const entry = contactCache.find((c) => c.id === id);
+            if (!entry) return;
+
+            document.getElementById('contactId').value = entry.id;
+            document.getElementById('contactKind').value = entry.kind;
+            document.getElementById('contactLabel').value = entry.label || '';
+            document.getElementById('contactValue').value = entry.value || '';
+            document.getElementById('contactIsPrimary').checked = !!entry.is_primary;
+            document.getElementById('contactVisible').checked = !!entry.visible;
+            openFormDialog(contactForm, 'Edit contact');
+        }
+    });
+
+    contactForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError('contactError');
+        const contactDone = buttonBusy(contactForm.querySelector('button[type="submit"]'));
+
+        const id = document.getElementById('contactId').value;
+        const payload = {
+            kind: document.getElementById('contactKind').value,
+            label: document.getElementById('contactLabel').value.trim(),
+            value: document.getElementById('contactValue').value.trim(),
+            is_primary: document.getElementById('contactIsPrimary').checked,
+            visible: document.getElementById('contactVisible').checked,
+            updated_at: new Date().toISOString(),
+        };
+
+        if (!payload.value) {
+            showError('contactError', 'A number or address is needed.');
+            contactDone();
+            return;
+        }
+
+        if (payload.kind === 'email' && !/^[^@\s]+@[^@\s.]+\.[^@\s]+$/.test(payload.value)) {
+            showError('contactError', "That doesn't look like an email address.");
+            contactDone();
+            return;
+        }
+
+        // A local-format number (0722…) dials nowhere from abroad — which is
+        // most of the people reading this site — and wa.me silently produces
+        // a dead link rather than an error. Insist on the country code.
+        if (payload.kind !== 'email') {
+            const digits = payload.value.replace(/[^\d]/g, '');
+            if (!payload.value.startsWith('+') || digits.length < 10 || digits.length > 15) {
+                showError('contactError', 'Phone numbers need the full country code, starting with +. For example +254 715 257 111.');
+                contactDone();
+                return;
+            }
+        }
+
+        // Only one primary per type. Stand the old one down first, or the
+        // unique index rejects the save.
+        if (payload.is_primary) {
+            const previous = contactCache.find(
+                (c) => c.kind === payload.kind && c.is_primary && c.id !== id);
+            if (previous) {
+                const { error } = await sbClient
+                    .from('contact_methods')
+                    .update({ is_primary: false, updated_at: new Date().toISOString() })
+                    .eq('id', previous.id);
+                if (error) {
+                    showError('contactError', 'Failed to move the primary flag over.');
+                    contactDone();
+                    return;
+                }
+            }
+        }
+
+        // New entries go to the bottom of the list.
+        if (!id) {
+            const highest = contactCache.reduce((max, c) => Math.max(max, c.sort_order || 0), -1);
+            payload.sort_order = highest + 1;
+        }
+
+        const { error } = id
+            ? await sbClient.from('contact_methods').update(payload).eq('id', id)
+            : await sbClient.from('contact_methods').insert(payload);
+
+        if (error) {
+            showError('contactError', 'Failed to save that contact detail.');
+            contactDone();
+            return;
+        }
+
+        contactDone('Saved');
+        showToast('Contact detail saved.');
+        closeFormDialog(contactForm);
+        resetContactForm();
+        loadContactMethods();
+    });
+
     // ---------- Activities ----------
 
     // The things-to-do entries behind /activities and the homepage teaser.
@@ -2453,8 +2669,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ['ogImageUrl', 'og_image_url', 'text'],
         ['businessName', 'business_name', 'text'],
         ['businessDescription', 'business_description', 'text'],
-        ['businessPhone', 'telephone', 'text'],
-        ['businessEmail', 'email', 'text'],
+        // telephone / email deliberately absent: they come from the Contact
+        // tab now. The site_settings columns stay in place as the fallback
+        // used if contact_methods can't be read.
         ['businessStreet', 'street_address', 'text'],
         ['businessLocality', 'address_locality', 'text'],
         ['businessRegion', 'address_region', 'text'],

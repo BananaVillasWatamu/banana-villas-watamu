@@ -54,6 +54,7 @@
                 <button class="admin-tab" data-tab="faqs">FAQs</button>
                 <button class="admin-tab" data-tab="activities">Activities</button>
                 <button class="admin-tab" data-tab="gallery">Gallery</button>
+                <button class="admin-tab" data-tab="contact">Contact</button>
                 <button class="admin-tab" data-tab="seo">SEO</button>
             </nav>
             <button id="logoutBtn" class="admin-btn-secondary admin-sidebar-logout">Log Out</button>
@@ -780,6 +781,88 @@
             </section>
 
             <!-- SEO -->
+            <section id="tab-contact" class="admin-panel">
+                <div class="admin-panel-header">
+                    <h2>Phone &amp; Email</h2>
+                    <button id="addContactBtn" class="admin-btn-secondary">+ Add contact</button>
+                </div>
+                <div id="contactError" class="form-error-banner" style="display:none;"></div>
+                <p class="admin-hint">These are the ways of reaching you shown in the Contact section of the site, in
+                    this order. The one marked <strong>Primary</strong> is the one used everywhere the site can only
+                    show a single number or address — the floating WhatsApp button, the booking form's WhatsApp
+                    hand-off, and the details Google reads. Hidden entries stay here but disappear from the public
+                    site. Changes apply within about 5 minutes.</p>
+
+                <dialog class="admin-dialog" id="contactDialog" aria-labelledby="contactDialogTitle">
+                    <div class="admin-dialog-panel">
+                        <header class="admin-dialog-header">
+                            <h3 id="contactDialogTitle">Add contact</h3>
+                            <button type="button" class="admin-dialog-close" data-close-dialog
+                                aria-label="Close">&times;</button>
+                        </header>
+                        <form id="contactForm" class="admin-form">
+                            <input type="hidden" id="contactId">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="contactKind">Type</label>
+                                    <select id="contactKind" required>
+                                        <option value="phone">Phone</option>
+                                        <option value="whatsapp">WhatsApp</option>
+                                        <option value="email">Email</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label for="contactLabel">Label <span class="optional">(optional)</span></label>
+                                    <input type="text" id="contactLabel" maxlength="60"
+                                        placeholder="e.g. Primary, Backup, Bookings">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="contactValue">Number or address</label>
+                                <input type="text" id="contactValue" maxlength="200" required
+                                    placeholder="+254 715 257 111">
+                                <p class="admin-hint">Phone numbers need the country code. Spaces and brackets are
+                                    fine — they're tidied up for the dialler and the WhatsApp link.</p>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" id="contactIsPrimary">
+                                <label for="contactIsPrimary">Primary for this type (the one the rest of the site
+                                    uses)</label>
+                            </div>
+                            <div class="form-check">
+                                <input type="checkbox" id="contactVisible" checked>
+                                <label for="contactVisible">Visible on the public site</label>
+                            </div>
+                            <div class="form-actions admin-form-actions">
+                                <button type="submit" class="btn-primary">Save contact</button>
+                                <button type="button" id="cancelContactBtn" class="admin-btn-secondary">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </dialog>
+
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Order</th>
+                                <th>Type</th>
+                                <th>Label</th>
+                                <th>Number / address</th>
+                                <th>Primary</th>
+                                <th>Visible</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contactTableBody">
+                            <tr>
+                                <td colspan="7" class="admin-table-empty">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
             <section id="tab-seo" class="admin-panel">
                 <div class="admin-panel-header">
                     <h2>SEO &amp; Social Preview</h2>
@@ -819,7 +902,8 @@
                     <h3 class="admin-form-heading">Business details for Google</h3>
                     <p class="admin-hint">These fill the structured data on the homepage — the block search engines
                         read for the name, address, phone number and map pin behind a listing. Anything left blank
-                        falls back to the site's built-in details.</p>
+                        falls back to the site's built-in details. The phone number and email come from the
+                        <strong>Contact</strong> tab — whichever entry is marked primary there.</p>
 
                     <div class="form-row">
                         <div class="form-group">
@@ -827,24 +911,14 @@
                             <input type="text" id="businessName" placeholder="Banana Villas Watamu">
                         </div>
                         <div class="form-group">
-                            <label for="businessPhone">Phone</label>
-                            <input type="tel" id="businessPhone" placeholder="+254715257111">
+                            <label for="businessPriceRange">Price range <span class="optional">(optional)</span></label>
+                            <input type="text" id="businessPriceRange" placeholder="e.g. KES 15,000 – 30,000">
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="businessDescription">Short description</label>
                         <textarea id="businessDescription" rows="2"
                             placeholder="Luxury 3-bedroom villa with oasis pool, beach access…"></textarea>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="businessEmail">Email</label>
-                            <input type="email" id="businessEmail" placeholder="contact@bananavillaswatamu.com">
-                        </div>
-                        <div class="form-group">
-                            <label for="businessPriceRange">Price range <span class="optional">(optional)</span></label>
-                            <input type="text" id="businessPriceRange" placeholder="e.g. KES 15,000 – 30,000">
-                        </div>
                     </div>
                     <div class="form-group">
                         <label for="businessStreet">Street address</label>

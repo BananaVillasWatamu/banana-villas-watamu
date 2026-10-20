@@ -1,3 +1,5 @@
+const { primary } = require('./contactMethods');
+
 // Amenities are a fixed part of the property rather than something worth
 // editing from the dashboard, so they stay here.
 const AMENITIES = [
@@ -40,15 +42,24 @@ function num(value) {
 
 // Builds the LodgingBusiness block Google reads. Anything the owner has left
 // blank in the SEO tab falls back to the values the template used to carry.
-function buildBusinessSchema(settings, ogImage) {
+//
+// The phone and email come from the Contact tab rather than from site_settings
+// — whichever row is flagged primary. Two editable copies of the same number
+// only ever end up disagreeing, and the one a guest can see on the page is the
+// one Google should be quoting.
+function buildBusinessSchema(settings, ogImage, contactMethods) {
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'LodgingBusiness',
     name: pick(settings, 'business_name'),
     description: pick(settings, 'business_description'),
     url: SITE_URL,
-    telephone: pick(settings, 'telephone'),
-    email: pick(settings, 'email'),
+    telephone: contactMethods
+      ? primary(contactMethods, 'phone')
+      : pick(settings, 'telephone'),
+    email: contactMethods
+      ? primary(contactMethods, 'email')
+      : pick(settings, 'email'),
     address: {
       '@type': 'PostalAddress',
       streetAddress: pick(settings, 'street_address'),

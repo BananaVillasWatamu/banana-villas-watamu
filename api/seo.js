@@ -1,5 +1,6 @@
 const { buildSitemap, buildLlmsTxt } = require('./_lib/seoFeeds');
 const { renderNotFound } = require('./_lib/notFound');
+const { fetchContactMethods, primaryWhatsAppUrl } = require('./_lib/contactMethods');
 
 // One function serving three routes — /sitemap.xml, /llms.txt and the
 // catch-all 404 — because the Hobby plan allows 12 serverless functions per
@@ -27,5 +28,7 @@ module.exports = async (req, res) => {
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=3600');
-  res.status(404).send(renderNotFound());
+  res.status(404).send(renderNotFound({
+    whatsappUrl: primaryWhatsAppUrl(await fetchContactMethods()),
+  }));
 };

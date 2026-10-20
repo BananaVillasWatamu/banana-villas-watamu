@@ -471,7 +471,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // immediately and logs the enquiry in the background — so a half-filled
     // form, or dates that turn out to be taken, still reach the owner
     // instead of disappearing into a chat we never see.
-    const WHATSAPP_NUMBER = '254715257111';
+    // Read off the floating WhatsApp button, which the server renders from
+    // the number marked primary in the dashboard. Taking it from the DOM
+    // keeps this file static (it isn't templated) while still following
+    // whatever the owner has set, rather than a copy that goes stale.
+    const WHATSAPP_NUMBER = (() => {
+        const href = document.querySelector('.whatsapp-float')?.getAttribute('href') || '';
+        const digits = href.replace(/[^\d]/g, '');
+        return digits || '254715257111';
+    })();
 
     const readContactForm = () => ({
         checkin: document.getElementById('contactCheckin').value,

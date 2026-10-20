@@ -7,10 +7,10 @@ const {
   escapeHtml,
 } = require('./_lib/activities');
 const { renderNotFound } = require('./_lib/notFound');
+const { fetchContactMethods, primaryWhatsAppUrl } = require('./_lib/contactMethods');
 
 const templatePath = path.join(__dirname, '..', 'activity.template.html');
 const SITE = 'https://www.bananavillaswatamu.com';
-const WHATSAPP = 'https://wa.me/254715257111';
 const FALLBACK_OG = `${SITE}/images/Banana%20Villas%20Watamu%20Photo%20-%20%20(1).jpg`;
 
 // A page with two lines on it competes with the listing page and wins nothing.
@@ -65,6 +65,7 @@ module.exports = async (req, res) => {
     res.status(404).send(renderNotFound({
       heading: "We can't find that activity",
       message: 'It may have been renamed or taken down. Here is everything else there is to do in Watamu.',
+      whatsappUrl: primaryWhatsAppUrl(await fetchContactMethods()),
     }));
     return;
   }
@@ -127,6 +128,8 @@ module.exports = async (req, res) => {
   // Gede Ruins tour on the 12th for four people has nothing to do with the
   // fields on a room booking, and every hop between the button and the form
   // loses people.
+  const whatsappUrl = primaryWhatsAppUrl(await fetchContactMethods());
+
   const ctaBlock = activity.we_arrange
     ? `<div class="activity-detail-cta glass-card" id="book">
                     <h2>Request this${activity.duration_text ? ` <span class="activity-cta-meta">${escapeHtml(activity.duration_text)}</span>` : ''}</h2>
@@ -171,7 +174,7 @@ module.exports = async (req, res) => {
                         <div class="form-actions">
                             <button type="submit" class="btn-primary btn-cta" id="actSubmit">Request ${escapeHtml(activity.title)}</button>
                             <p class="form-actions-alt">Or ask on
-                                <a class="link-whatsapp" href="${WHATSAPP}?text=${encodeURIComponent(`Hello Banana Villas Watamu! I'd like to ask about ${activity.title}.`)}"
+                                <a class="link-whatsapp" href="${whatsappUrl}?text=${encodeURIComponent(`Hello Banana Villas Watamu! I'd like to ask about ${activity.title}.`)}"
                                    target="_blank" rel="noopener noreferrer">WhatsApp</a>
                             </p>
                         </div>
@@ -197,7 +200,8 @@ module.exports = async (req, res) => {
     .split('{{HERO_IMAGE}}').join(heroImage)
     .split('{{BODY}}').join(paragraphs(bodyText) || `<p>${escapeHtml(activity.summary || '')}</p>`)
     .split('{{CTA_BLOCK}}').join(ctaBlock)
-    .split('{{RELATED}}').join(related);
+    .split('{{RELATED}}').join(related)
+    .split('{{WHATSAPP_URL}}').join(escapeHtml(whatsappUrl));
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');

@@ -8,6 +8,7 @@ const {
   renderSchema,
   escapeHtml,
 } = require('./_lib/activities');
+const { fetchContactMethods, primaryWhatsAppUrl } = require('./_lib/contactMethods');
 
 const templatePath = path.join(__dirname, '..', 'activities.template.html');
 
@@ -30,6 +31,7 @@ module.exports = async (req, res) => {
   }
 
   const activities = await fetchActivities();
+  const contactMethods = await fetchContactMethods();
 
   let html;
   try {
@@ -46,7 +48,8 @@ module.exports = async (req, res) => {
     .split('{{ACTIVITY_GRID}}').join(renderGrid(activities))
     .split('{{PAGE_TITLE}}').join(escapeHtml(DEFAULTS.title))
     .split('{{PAGE_DESCRIPTION}}').join(escapeHtml(DEFAULTS.description))
-    .split('{{OG_IMAGE}}').join(escapeHtml(settings?.og_image_url || DEFAULTS.ogImage));
+    .split('{{OG_IMAGE}}').join(escapeHtml(settings?.og_image_url || DEFAULTS.ogImage))
+    .split('{{WHATSAPP_URL}}').join(escapeHtml(primaryWhatsAppUrl(contactMethods)));
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
