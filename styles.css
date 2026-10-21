@@ -776,6 +776,28 @@ footer {
 
 .footer-bottom p {
     margin: 0;
+    /* The global `p { color: var(--text-light) }` sets colour on the element
+       itself, which beats the white this container passes down by
+       inheritance — leaving the copyright at 2:1 contrast on the dark
+       footer. Opt back in to the parent's colour. */
+    color: inherit;
+}
+
+/* Sits beside the copyright on a wide screen and wraps under it on a phone,
+   courtesy of the flex-wrap above. The link needs its own underline: the
+   global `a` rule strips decoration and inherits colour, so without this it
+   reads as plain text. */
+.footer-credit a {
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-color: rgba(255, 255, 255, 0.35);
+}
+
+.footer-credit a:hover,
+.footer-credit a:focus-visible {
+    color: #ffffff;
+    text-decoration-color: currentColor;
 }
 
 .footer-admin-link {
