@@ -32,18 +32,25 @@ const MIME = {
   '.woff2': 'font/woff2',
 };
 
-// Never serve secrets, dependencies or server code as static files.
-function isServable(rel) {
-  const parts = rel.split('/');
+// Never serve secrets, dependencies or server code as static files. Checked
+// on the resolved path, split on both separators and compared case-blind,
+// because Windows treats '\' as a separator and ignores case — checking the
+// URL text alone let /%5C.env and /API/... through.
+const PRIVATE_DIRS = ['node_modules', 'api', 'supabase', 'backups', 'scripts'];
+
+function isServable(file) {
+  const rel = path.relative(root, file);
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) return false;
+  const parts = rel.split(/[\\/]/).map((p) => p.toLowerCase());
   if (parts.some((p) => p.startsWith('.'))) return false;
-  return !['node_modules', 'api', 'supabase', 'backups', 'scripts'].includes(parts[0]);
+  return !PRIVATE_DIRS.includes(parts[0]);
 }
 
 function staticFile(pathname) {
-  const rel = decodeURIComponent(pathname).replace(/^\/+/, '');
-  if (!rel || !isServable(rel)) return null;
-  const file = path.join(root, rel);
-  if (!file.startsWith(root)) return null;
+  const decoded = decodeURIComponent(pathname);
+  if (decoded.includes('\\') || decoded.includes('\0')) return null;
+  const file = path.resolve(root, '.' + decoded);
+  if (!isServable(file)) return null;
   return fs.existsSync(file) && fs.statSync(file).isFile() ? file : null;
 }
 
@@ -134,4 +141,5 @@ http
     }
     console.log(req.method, req.url, res.statusCode);
   })
-  .listen(port, () => console.log(`Banana Villas preview on http://localhost:${port}`));
+  // Loopback only: this server loads the real .env, so keep it off the LAN.
+  .listen(port, '127.0.0.1', () => console.log(`Banana Villas preview on http://localhost:${port}`));

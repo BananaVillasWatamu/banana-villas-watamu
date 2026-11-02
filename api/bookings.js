@@ -7,6 +7,12 @@ const MAX_EMAIL_LEN = 200;
 const MAX_PHONE_LEN = 40;
 const MAX_NOTES_LEN = 4000;
 const MAX_DAYS_AHEAD = 730; // 2 years — keeps far-future spam from piling up
+// Longest stay the form can hold. Every pending hold blocks its dates on the
+// site and in the Airbnb/Booking.com feeds, so without this one anonymous
+// request with checkout 9999-12-31 would block the whole calendar.
+const MAX_NIGHTS = 60;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[0-9+\-\s()]{6,40}$/;
@@ -87,7 +93,11 @@ module.exports = async (req, res) => {
   const maxDate = new Date(today);
   maxDate.setDate(maxDate.getDate() + MAX_DAYS_AHEAD);
 
+  // Strict YYYY-MM-DD: the raw strings go to Postgres date casts, so they
+  // must be the exact dates JavaScript checked, not something Date() parsed.
   if (
+    !DATE_RE.test(checkin) ||
+    !DATE_RE.test(checkout) ||
     Number.isNaN(checkinDate.getTime()) ||
     Number.isNaN(checkoutDate.getTime()) ||
     checkoutDate <= checkinDate ||
@@ -98,7 +108,16 @@ module.exports = async (req, res) => {
     return;
   }
 
-  if ((adults || 0) + (kids || 0) > MAX_GUESTS) {
+  if ((checkoutDate - checkinDate) / DAY_MS > MAX_NIGHTS) {
+    await reject(400, 'stay_too_long', 'invalid');
+    return;
+  }
+
+  if (
+    (adults !== null && (Number.isNaN(adults) || adults < 0)) ||
+    (kids !== null && (Number.isNaN(kids) || kids < 0)) ||
+    (adults || 0) + (kids || 0) > MAX_GUESTS
+  ) {
     await reject(400, 'too_many_guests', 'invalid');
     return;
   }

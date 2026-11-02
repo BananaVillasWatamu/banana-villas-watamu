@@ -10,6 +10,8 @@
 -- next to it ("Primary", "Backup"), and the row flagged `is_primary` is the
 -- one the rest of the site uses when it needs a single number or address —
 -- the WhatsApp float, the booking form hand-off, Google's structured data.
+--
+-- Needs migration-admin-allowlist.sql first: the write policy uses is_admin().
 
 create table if not exists contact_methods (
   id uuid primary key default gen_random_uuid(),
@@ -40,10 +42,11 @@ create policy "public read visible contact methods"
   using (visible = true);
 
 drop policy if exists "authenticated manage contact methods" on contact_methods;
-create policy "authenticated manage contact methods"
+drop policy if exists "admins manage contact methods" on contact_methods;
+create policy "admins manage contact methods"
   on contact_methods for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- Seed with exactly what the templates used to hardcode, so the site looks
 -- the same the moment this runs and nothing has to be retyped. Only on an

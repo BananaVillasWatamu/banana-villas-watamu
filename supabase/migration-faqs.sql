@@ -3,6 +3,8 @@
 -- faqs table and loads the eight questions that were hardcoded in the site,
 -- so the public FAQ section looks exactly the same until they're edited from
 -- the dashboard. Safe to re-run: the seed only fires on an empty table.
+--
+-- Needs migration-admin-allowlist.sql first: the write policy uses is_admin().
 
 create table if not exists faqs (
   id uuid primary key default gen_random_uuid(),
@@ -24,10 +26,11 @@ create policy "public read published faqs"
   using (published = true);
 
 drop policy if exists "authenticated manage faqs" on faqs;
-create policy "authenticated manage faqs"
+drop policy if exists "admins manage faqs" on faqs;
+create policy "admins manage faqs"
   on faqs for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 insert into faqs (question, answer, sort_order, published)
 select * from (values

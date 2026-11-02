@@ -534,6 +534,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return "That phone number doesn't look right — please double-check it.";
             case 'invalid_dates':
                 return 'Please choose valid check-in/check-out dates (not in the past, within the next 2 years).';
+            case 'stay_too_long':
+                return 'For stays longer than 60 nights, please message us on WhatsApp and we will arrange it with you directly.';
             case 'rate_limited':
                 return "You've submitted a few requests already — please wait a bit before trying again, or message us on WhatsApp directly.";
             default:

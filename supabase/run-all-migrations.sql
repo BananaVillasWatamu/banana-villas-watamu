@@ -4,7 +4,51 @@
 --
 -- Covers: the enquiry log, editable FAQs, the header slider flag, the
 -- editable business details behind the site's structured data, the
--- editable phone numbers and email addresses, and the homepage drone video.
+-- editable phone numbers and email addresses, the homepage drone video,
+-- and admin-only access: every dashboard policy uses is_admin(), so running
+-- this never re-opens data to other signed-in accounts.
+
+
+-- ===========================================================
+-- 0. admin allowlist  (policies below depend on is_admin())
+-- ===========================================================
+
+-- Admin allowlist --------------------------------------------------------
+-- Only user ids listed in admins can manage the dashboard's data; any other
+-- signed-in account gets nothing, even if public signup is on. Add someone
+-- from the SQL editor:
+--   insert into admins (user_id, email)
+--   select id, email from auth.users where email = 'owner@example.com';
+
+create table if not exists admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  added_at timestamptz not null default now()
+);
+
+alter table admins enable row level security;
+
+-- security definer so policies can read the allowlist whatever the caller's
+-- own permissions are; it runs as the table owner, which RLS does not apply to.
+create or replace function is_admin()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (select 1 from admins where user_id = auth.uid());
+$$;
+
+revoke execute on function is_admin() from public, anon;
+grant execute on function is_admin() to authenticated, service_role;
+
+-- Admins can see who else is an admin; nobody else can see the table at all.
+-- Adding or removing an admin is done from the SQL editor, deliberately.
+drop policy if exists "admins read the allowlist" on admins;
+create policy "admins read the allowlist"
+  on admins for select
+  using (is_admin());
 
 
 -- ===========================================================
@@ -43,10 +87,11 @@ create index if not exists enquiries_created_at_idx on enquiries (created_at des
 alter table enquiries enable row level security;
 
 drop policy if exists "authenticated manage enquiries" on enquiries;
-create policy "authenticated manage enquiries"
+drop policy if exists "admins manage enquiries" on enquiries;
+create policy "admins manage enquiries"
   on enquiries for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 
 -- ===========================================================
@@ -73,10 +118,11 @@ create policy "public read published faqs"
   using (published = true);
 
 drop policy if exists "authenticated manage faqs" on faqs;
-create policy "authenticated manage faqs"
+drop policy if exists "admins manage faqs" on faqs;
+create policy "admins manage faqs"
   on faqs for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 insert into faqs (question, answer, sort_order, published)
 select * from (values
@@ -170,10 +216,11 @@ create policy "public read visible contact methods"
   using (visible = true);
 
 drop policy if exists "authenticated manage contact methods" on contact_methods;
-create policy "authenticated manage contact methods"
+drop policy if exists "admins manage contact methods" on contact_methods;
+create policy "admins manage contact methods"
   on contact_methods for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 insert into contact_methods (kind, label, value, is_primary, sort_order)
 select * from (values

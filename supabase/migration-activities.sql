@@ -10,6 +10,8 @@
 -- Safe to re-run. Seeds placeholder entries only while the table is empty,
 -- all unpublished, so nothing appears on the live site until the real photos
 -- and wording are filled in from the dashboard.
+--
+-- Needs migration-admin-allowlist.sql first: the write policy uses is_admin().
 
 create table if not exists activities (
   id uuid primary key default gen_random_uuid(),
@@ -62,10 +64,11 @@ create policy "public read published activities"
   using (published = true);
 
 drop policy if exists "authenticated manage activities" on activities;
-create policy "authenticated manage activities"
+drop policy if exists "admins manage activities" on activities;
+create policy "admins manage activities"
   on activities for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- Photos for the cards. Same shape as the gallery bucket: public to read,
 -- writable only by the logged-in owner, with the size and type limits
@@ -83,10 +86,11 @@ create policy "public read activity bucket"
   using (bucket_id = 'activity-images');
 
 drop policy if exists "authenticated manage activity bucket" on storage.objects;
-create policy "authenticated manage activity bucket"
+drop policy if exists "admins manage activity bucket" on storage.objects;
+create policy "admins manage activity bucket"
   on storage.objects for all
-  using (bucket_id = 'activity-images' and auth.role() = 'authenticated')
-  with check (bucket_id = 'activity-images' and auth.role() = 'authenticated');
+  using (bucket_id = 'activity-images' and is_admin())
+  with check (bucket_id = 'activity-images' and is_admin());
 
 -- Placeholders: the obvious Watamu categories, unpublished, with the wording
 -- left deliberately plain so it reads as a draft rather than as a claim.

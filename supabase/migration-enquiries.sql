@@ -2,6 +2,8 @@
 -- Run once in the Supabase SQL editor on an existing database. (A fresh
 -- database created from schema.sql already has all of this — the statements
 -- below are idempotent, so running it there is harmless too.)
+--
+-- Needs migration-admin-allowlist.sql first: the write policy uses is_admin().
 
 do $$
 begin
@@ -35,7 +37,8 @@ create index if not exists enquiries_created_at_idx on enquiries (created_at des
 alter table enquiries enable row level security;
 
 drop policy if exists "authenticated manage enquiries" on enquiries;
-create policy "authenticated manage enquiries"
+drop policy if exists "admins manage enquiries" on enquiries;
+create policy "admins manage enquiries"
   on enquiries for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());

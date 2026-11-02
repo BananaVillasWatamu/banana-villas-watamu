@@ -12,8 +12,49 @@
 -- Run in the Supabase SQL editor (Database -> SQL Editor -> New query).
 -- This also creates and locks down the "gallery-images" Storage bucket (see
 -- the bottom of this file) — no manual dashboard steps needed for that.
+--
+-- The dashboard's data is locked to accounts listed in `admins`. On a new
+-- project that list starts empty: sign in once, then add yourself with the
+-- insert shown in the "Admin allowlist" block below.
 
 create extension if not exists pgcrypto;
+
+-- Admin allowlist --------------------------------------------------------
+-- Only user ids listed in admins can manage the dashboard's data; any other
+-- signed-in account gets nothing, even if public signup is on. Add someone
+-- from the SQL editor:
+--   insert into admins (user_id, email)
+--   select id, email from auth.users where email = 'owner@example.com';
+
+create table if not exists admins (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  email text,
+  added_at timestamptz not null default now()
+);
+
+alter table admins enable row level security;
+
+-- security definer so policies can read the allowlist whatever the caller's
+-- own permissions are; it runs as the table owner, which RLS does not apply to.
+create or replace function is_admin()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $
+  select exists (select 1 from admins where user_id = auth.uid());
+$;
+
+revoke execute on function is_admin() from public, anon;
+grant execute on function is_admin() to authenticated, service_role;
+
+-- Admins can see who else is an admin; nobody else can see the table at all.
+-- Adding or removing an admin is done from the SQL editor, deliberately.
+drop policy if exists "admins read the allowlist" on admins;
+create policy "admins read the allowlist"
+  on admins for select
+  using (is_admin());
 
 do $$
 begin
@@ -56,10 +97,11 @@ create policy "public read published reviews"
   using (published = true);
 
 drop policy if exists "authenticated manage reviews" on reviews;
-create policy "authenticated manage reviews"
+drop policy if exists "admins manage reviews" on reviews;
+create policy "admins manage reviews"
   on reviews for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- Bookings ---------------------------------------------------------------
 
@@ -98,10 +140,11 @@ alter table bookings enable row level security;
 -- blocks (source = 'blocked') through this same policy — those don't need
 -- the guest-facing overlap-checking RPC.
 drop policy if exists "authenticated manage bookings" on bookings;
-create policy "authenticated manage bookings"
+drop policy if exists "admins manage bookings" on bookings;
+create policy "admins manage bookings"
   on bookings for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- Atomically checks for an overlapping active booking and inserts a new
 -- 48-hour hold if the dates are free. Locks the table for the duration of
@@ -215,10 +258,11 @@ alter table enquiries enable row level security;
 -- table directly — /api/bookings and /api/enquiries write to it with the
 -- service-role key, which bypasses RLS.
 drop policy if exists "authenticated manage enquiries" on enquiries;
-create policy "authenticated manage enquiries"
+drop policy if exists "admins manage enquiries" on enquiries;
+create policy "admins manage enquiries"
   on enquiries for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- Gallery ------------------------------------------------------------------
 
@@ -243,10 +287,11 @@ create policy "public read visible gallery images"
   using (visible = true);
 
 drop policy if exists "authenticated manage gallery images" on gallery_images;
-create policy "authenticated manage gallery images"
+drop policy if exists "admins manage gallery images" on gallery_images;
+create policy "admins manage gallery images"
   on gallery_images for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- FAQs --------------------------------------------------------------------
 -- The questions that used to be hardcoded in the FAQ section of the site.
@@ -273,10 +318,11 @@ create policy "public read published faqs"
   using (published = true);
 
 drop policy if exists "authenticated manage faqs" on faqs;
-create policy "authenticated manage faqs"
+drop policy if exists "admins manage faqs" on faqs;
+create policy "admins manage faqs"
   on faqs for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- Activities ---------------------------------------------------------------
 -- Things to do in Watamu, rendered into /activities and the homepage teaser
@@ -328,10 +374,11 @@ create policy "public read published activities"
   using (published = true);
 
 drop policy if exists "authenticated manage activities" on activities;
-create policy "authenticated manage activities"
+drop policy if exists "admins manage activities" on activities;
+create policy "admins manage activities"
   on activities for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 -- Contact methods ---------------------------------------------------------
 
@@ -367,10 +414,11 @@ create policy "public read visible contact methods"
   using (visible = true);
 
 drop policy if exists "authenticated manage contact methods" on contact_methods;
-create policy "authenticated manage contact methods"
+drop policy if exists "admins manage contact methods" on contact_methods;
+create policy "admins manage contact methods"
   on contact_methods for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 
 insert into contact_methods (kind, label, value, is_primary, sort_order)
 select * from (values
@@ -418,10 +466,11 @@ insert into site_settings (id) values (1) on conflict (id) do nothing;
 alter table site_settings enable row level security;
 
 drop policy if exists "authenticated manage site settings" on site_settings;
-create policy "authenticated manage site settings"
+drop policy if exists "admins manage site settings" on site_settings;
+create policy "admins manage site settings"
   on site_settings for all
-  using (auth.role() = 'authenticated')
-  with check (auth.role() = 'authenticated');
+  using (is_admin())
+  with check (is_admin());
 -- No public select policy: /api/index.js reads this with the service-role
 -- key, which bypasses RLS entirely.
 
@@ -444,10 +493,11 @@ create policy "public read gallery bucket"
   using (bucket_id = 'gallery-images');
 
 drop policy if exists "authenticated manage gallery bucket" on storage.objects;
-create policy "authenticated manage gallery bucket"
+drop policy if exists "admins manage gallery bucket" on storage.objects;
+create policy "admins manage gallery bucket"
   on storage.objects for all
-  using (bucket_id = 'gallery-images' and auth.role() = 'authenticated')
-  with check (bucket_id = 'gallery-images' and auth.role() = 'authenticated');
+  using (bucket_id = 'gallery-images' and is_admin())
+  with check (bucket_id = 'gallery-images' and is_admin());
 
 -- Photos for the cards. Same shape as the gallery bucket: public to read,
 -- writable only by the logged-in owner, with the size and type limits
@@ -465,7 +515,8 @@ create policy "public read activity bucket"
   using (bucket_id = 'activity-images');
 
 drop policy if exists "authenticated manage activity bucket" on storage.objects;
-create policy "authenticated manage activity bucket"
+drop policy if exists "admins manage activity bucket" on storage.objects;
+create policy "admins manage activity bucket"
   on storage.objects for all
-  using (bucket_id = 'activity-images' and auth.role() = 'authenticated')
-  with check (bucket_id = 'activity-images' and auth.role() = 'authenticated');
+  using (bucket_id = 'activity-images' and is_admin())
+  with check (bucket_id = 'activity-images' and is_admin());
