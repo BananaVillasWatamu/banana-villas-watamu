@@ -1206,4 +1206,21 @@ document.addEventListener('DOMContentLoaded', () => {
         updateMobileAvailabilityUI();
     });
 
+    // Drone video: show a thumbnail and only swap in the YouTube player on
+    // click, so the page doesn't pay for YouTube's scripts up front.
+    const droneVideo = document.getElementById('droneVideo');
+    const droneVideoId = droneVideo?.dataset.videoId;
+    if (droneVideo && /^[\w-]{11}$/.test(droneVideoId)) {
+        document.getElementById('video').hidden = false;
+        droneVideo.querySelector('.video-thumb').src = `https://i.ytimg.com/vi/${droneVideoId}/hqdefault.jpg`;
+        droneVideo.querySelector('.video-play').addEventListener('click', () => {
+            const iframe = document.createElement('iframe');
+            iframe.src = `https://www.youtube-nocookie.com/embed/${droneVideoId}?autoplay=1&rel=0&playsinline=1`;
+            iframe.title = 'Drone video of Banana Villas Watamu';
+            iframe.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+            iframe.allowFullscreen = true;
+            droneVideo.replaceChildren(iframe);
+        }, { once: true });
+    }
+
 });

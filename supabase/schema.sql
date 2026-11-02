@@ -407,6 +407,9 @@ create table if not exists site_settings (
   maps_url text default 'https://maps.app.goo.gl/CpwYLHs1epv3yJTHA',
   number_of_rooms int default 3,
   price_range text,
+  -- YouTube link for the homepage drone video; the section is hidden while
+  -- this is empty. Edited from the Gallery tab.
+  drone_video_url text,
   updated_at timestamptz not null default now()
 );
 

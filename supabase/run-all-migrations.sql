@@ -3,8 +3,8 @@
 -- Everything here is idempotent: running it twice is harmless.
 --
 -- Covers: the enquiry log, editable FAQs, the header slider flag, the
--- editable business details behind the site's structured data, and the
--- editable phone numbers and email addresses.
+-- editable business details behind the site's structured data, the
+-- editable phone numbers and email addresses, and the homepage drone video.
 
 
 -- ===========================================================
@@ -182,3 +182,11 @@ select * from (values
   ('email',    '',  'contact@bananavillaswatamu.com', true,  2)
 ) as seed(kind, label, value, is_primary, sort_order)
 where not exists (select 1 from contact_methods);
+
+
+-- ===========================================================
+-- 6. drone video  (from supabase/migration-drone-video.sql)
+-- ===========================================================
+
+alter table site_settings
+  add column if not exists drone_video_url text;

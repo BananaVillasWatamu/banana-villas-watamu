@@ -3,6 +3,7 @@ const path = require('path');
 const { getSupabaseAdmin } = require('./_lib/supabaseAdmin');
 const { buildBusinessSchema } = require('./_lib/businessSchema');
 const { fetchActivities, renderTeaser } = require('./_lib/activities');
+const { youtubeVideoId } = require('./_lib/youtube');
 const {
   fetchContactMethods,
   renderContactDetails,
@@ -66,6 +67,8 @@ module.exports = async (req, res) => {
     .split('{{BUSINESS_SCHEMA}}').join(buildBusinessSchema(settings, ogImage, contactMethods))
     .split('{{CONTACT_DETAILS}}').join(renderContactDetails(contactMethods))
     .split('{{WHATSAPP_URL}}').join(escapeHtml(primaryWhatsAppUrl(contactMethods)))
+    // Empty when no link is saved, which keeps the drone video section hidden.
+    .split('{{DRONE_VIDEO_ID}}').join(youtubeVideoId(settings?.drone_video_url) || '')
     .split('{{SEO_TITLE}}').join(escapeHtml(title))
     .split('{{SEO_DESCRIPTION}}').join(escapeHtml(description))
     .split('{{OG_TITLE}}').join(escapeHtml(ogTitle))

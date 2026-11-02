@@ -547,6 +547,85 @@ p {
     transform: scale(1.1);
 }
 
+/* Drone Video Section */
+.video-frame {
+    position: relative;
+    max-width: 960px;
+    margin: 0 auto;
+    aspect-ratio: 16 / 9;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background-color: var(--text-dark);
+    box-shadow: var(--glass-shadow);
+}
+
+.video-frame iframe,
+.video-play {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.video-play {
+    padding: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.video-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.video-play:hover .video-thumb {
+    transform: scale(1.05);
+}
+
+.video-play-icon {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 84px;
+    height: 84px;
+    border-radius: var(--radius-pill);
+    background-color: var(--primary-color);
+    color: var(--primary-ink);
+    transform: translate(-50%, -50%);
+    transition: transform 0.3s var(--bounce), background-color 0.3s ease;
+}
+
+.video-play-icon svg {
+    width: 36px;
+    height: 36px;
+    margin-left: 4px; /* optically centre the triangle */
+    fill: currentColor;
+}
+
+.video-play:hover .video-play-icon,
+.video-play:focus-visible .video-play-icon {
+    background-color: var(--primary-hover);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+@media (max-width: 768px) {
+    .video-play-icon {
+        width: 64px;
+        height: 64px;
+    }
+
+    .video-play-icon svg {
+        width: 28px;
+        height: 28px;
+    }
+}
+
 /* Contact Section */
 .contact-wrapper {
     display: grid;

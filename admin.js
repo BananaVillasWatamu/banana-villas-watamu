@@ -133,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadContactMethods();
         loadSeoSettings();
         loadIcalSettings();
+        loadDroneVideo();
     };
 
     const showLogin = () => {
@@ -2650,6 +2651,58 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target.closest('#galleryDropzone') || !e.dataTransfer?.types.includes('Files')) return;
             e.preventDefault();
         });
+    });
+
+    // ---------- Drone video ----------
+
+    const droneVideoForm = document.getElementById('droneVideoForm');
+    const droneVideoUrl = document.getElementById('droneVideoUrl');
+    const droneVideoStatus = document.getElementById('droneVideoStatus');
+
+    // Same rules as youtubeVideoId() in api/_lib/youtube.js, which is what the
+    // homepage uses — checked here so a link the site can't play is caught on save.
+    const youtubeVideoId = (url) => {
+        const m = String(url || '').trim().match(
+            /^(?:https?:\/\/)?(?:www\.|m\.)?(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})(?:[?&#/].*)?$/);
+        return m ? m[1] : null;
+    };
+
+    async function loadDroneVideo() {
+        const { data, error } = await sbClient
+            .from('site_settings')
+            .select('drone_video_url')
+            .eq('id', 1)
+            .single();
+        if (error) return;
+        droneVideoUrl.value = data.drone_video_url || '';
+    }
+
+    droneVideoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        hideError('galleryError');
+        droneVideoStatus.textContent = '';
+
+        const url = droneVideoUrl.value.trim();
+        if (url && !youtubeVideoId(url)) {
+            showError('galleryError', "That doesn't look like a YouTube video link. Copy it from the Share button on YouTube.");
+            return;
+        }
+
+        const done = buttonBusy(droneVideoForm.querySelector('button[type="submit"]'));
+        const { error } = await sbClient
+            .from('site_settings')
+            .update({ drone_video_url: url || null, updated_at: new Date().toISOString() })
+            .eq('id', 1);
+
+        if (error) {
+            showError('galleryError', 'Failed to save the drone video.');
+            done();
+            return;
+        }
+        done('Saved');
+        droneVideoStatus.textContent = url
+            ? 'Saved. The video shows on the homepage within about 5 minutes.'
+            : 'Removed. The video section is hidden from the homepage within about 5 minutes.';
     });
 
     // ---------- SEO ----------

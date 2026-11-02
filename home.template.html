@@ -184,6 +184,22 @@
             </div>
         </section>
 
+        <!-- Drone Video Section — the YouTube player only loads once the guest presses play -->
+        <section id="video" class="section" hidden>
+            <div class="container">
+                <div class="section-header fade-up">
+                    <h2>See It From Above</h2>
+                    <p>Fly over the villa, the pool and the gardens.</p>
+                </div>
+                <div class="video-frame fade-up" id="droneVideo" data-video-id="{{DRONE_VIDEO_ID}}">
+                    <button type="button" class="video-play" aria-label="Play drone video of Banana Villas Watamu">
+                        <img class="video-thumb" alt="" loading="lazy">
+                        <span class="video-play-icon"><i data-lucide="play"></i></span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
         <!-- About Section -->
         <section id="about" class="section about">
             <div class="container">
