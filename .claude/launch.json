@@ -13,6 +13,12 @@
       "port": 8080
     },
     {
+      "name": "local",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/dev-server.js"],
+      "port": 3000
+    },
+    {
       "name": "dev",
       "runtimeExecutable": "cmd",
       "runtimeArgs": [
