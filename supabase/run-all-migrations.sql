@@ -40,8 +40,11 @@ as $$
   select exists (select 1 from admins where user_id = auth.uid());
 $$;
 
-revoke execute on function is_admin() from public, anon;
-grant execute on function is_admin() to authenticated, service_role;
+-- anon must be able to call it too: Postgres evaluates every policy on a
+-- table, so the admin policies run on public reads of the gallery, reviews
+-- and so on, and a revoked function makes those reads fail outright. It
+-- only ever answers false for a visitor who is not signed in.
+grant execute on function is_admin() to anon, authenticated, service_role;
 
 -- Admins can see who else is an admin; nobody else can see the table at all.
 -- Adding or removing an admin is done from the SQL editor, deliberately.
