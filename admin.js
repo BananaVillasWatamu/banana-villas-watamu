@@ -313,23 +313,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const TAB_KEY = 'adminTab';
 
     const adminSidebar = document.querySelector('.admin-sidebar');
-    const adminMenuBtn = document.getElementById('adminMenuBtn');
+    const adminMoreBtn = document.getElementById('adminMoreBtn');
+    const bottomTabs = document.querySelectorAll('.admin-bottom-tab[data-tab]');
 
-    // The sidebar folds into this menu on phones and small tablets.
+    // On phones and small tablets the sidebar becomes the panel behind More.
     const setMenuOpen = (open) => {
         adminSidebar.classList.toggle('menu-open', open);
-        adminMenuBtn.setAttribute('aria-expanded', open);
+        adminMoreBtn.setAttribute('aria-expanded', open);
     };
 
-    adminMenuBtn.addEventListener('click', () => setMenuOpen(!adminSidebar.classList.contains('menu-open')));
+    adminMoreBtn.addEventListener('click', () => setMenuOpen(!adminSidebar.classList.contains('menu-open')));
+    document.getElementById('adminMenuScrim').addEventListener('click', () => setMenuOpen(false));
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') setMenuOpen(false);
+    });
 
-    // The menu button stands in for every badge while the tabs are folded away.
-    const updateMenuBadge = () => {
-        const total = [...document.querySelectorAll('.admin-tab .admin-tab-badge')]
-            .reduce((sum, badge) => sum + (badge.hidden ? 0 : Number(badge.textContent)), 0);
-        const menuBadge = document.getElementById('adminMenuBadge');
-        menuBadge.textContent = total;
-        menuBadge.hidden = total === 0;
+    // The bottom bar's badges repeat the sidebar's.
+    const syncBottomBadges = () => {
+        [['bookingsTabBadge', 'bottomBookingsBadge'], ['enquiriesTabBadge', 'bottomEnquiriesBadge']].forEach(([from, to]) => {
+            const source = document.getElementById(from);
+            const copy = document.getElementById(to);
+            copy.textContent = source.textContent;
+            copy.hidden = source.hidden;
+        });
     };
 
     const openTab = (tabBtn) => {
@@ -337,7 +343,9 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.admin-panel').forEach((p) => p.classList.remove('active'));
         tabBtn.classList.add('active');
         document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active');
-        document.getElementById('adminMenuLabel').textContent = tabBtn.firstChild.textContent;
+        const onBottomBar = [...bottomTabs].some((b) => b.dataset.tab === tabBtn.dataset.tab);
+        bottomTabs.forEach((b) => b.classList.toggle('active', b.dataset.tab === tabBtn.dataset.tab));
+        adminMoreBtn.classList.toggle('active', !onBottomBar);
     };
 
     document.querySelectorAll('.admin-tab').forEach((tabBtn) => {
@@ -350,6 +358,12 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch {
                 // Storage can be blocked; the tab just won't survive a refresh.
             }
+        });
+    });
+
+    bottomTabs.forEach((btn) => {
+        btn.addEventListener('click', () => {
+            document.querySelector(`.admin-tab[data-tab="${btn.dataset.tab}"]`).click();
         });
     });
 
@@ -954,7 +968,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const badge = document.getElementById('bookingsTabBadge');
         badge.textContent = requests.length;
         badge.hidden = requests.length === 0;
-        updateMenuBadge();
+        syncBottomBadges();
 
         document.getElementById('homeNeedsAction').hidden = requests.length === 0;
         document.getElementById('homeNeedsActionList').innerHTML = requests.map((b) => {
@@ -1380,7 +1394,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (enquiriesTabBadge) {
             enquiriesTabBadge.textContent = openCount;
             enquiriesTabBadge.hidden = openCount === 0;
-            updateMenuBadge();
+            syncBottomBadges();
         }
 
         if (rows.length === 0) {
