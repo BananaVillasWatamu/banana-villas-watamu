@@ -969,7 +969,15 @@
                         <label for="ogImageUrl">Social share image</label>
                         <p class="admin-hint">The picture that shows up when someone shares the site on WhatsApp,
                             Facebook or X. Pick one from the gallery, or paste any image address below.</p>
-                        <div id="ogImagePicker" class="admin-og-picker">
+                        <div class="admin-og-current">
+                            <img id="ogImagePreview" class="admin-og-preview" alt="Current social share image" hidden>
+                            <p id="ogImageEmpty" class="admin-hint">No photo chosen, so the site uses its default share image.</p>
+                            <div class="admin-og-current-actions">
+                                <button type="button" id="ogChangeBtn" class="admin-btn-secondary">Change photo</button>
+                                <button type="button" id="ogRemoveBtn" class="admin-btn-secondary" hidden>Remove</button>
+                            </div>
+                        </div>
+                        <div id="ogImagePicker" class="admin-og-picker" hidden>
                             <p class="admin-table-empty">Loading photos…</p>
                         </div>
                         <input type="url" id="ogImageUrl" placeholder="https://...">

@@ -3172,6 +3172,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const seoForm = document.getElementById('seoForm');
     const ogImageUrlInput = document.getElementById('ogImageUrl');
     const ogImagePicker = document.getElementById('ogImagePicker');
+    const ogImagePreview = document.getElementById('ogImagePreview');
+    const ogChangeBtn = document.getElementById('ogChangeBtn');
+    const ogRemoveBtn = document.getElementById('ogRemoveBtn');
     const seoSaveStatus = document.getElementById('seoSaveStatus');
 
     // Fields that map straight onto a site_settings column. Kept as a table so
@@ -3204,6 +3207,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ogImagePicker.querySelectorAll('.admin-og-option').forEach((option) => {
             option.classList.toggle('selected', option.dataset.url === current);
         });
+        ogImagePreview.hidden = !current;
+        if (current) ogImagePreview.src = current;
+        document.getElementById('ogImageEmpty').hidden = Boolean(current);
+        ogRemoveBtn.hidden = !current;
+    };
+
+    // Through an input event, so a picked photo counts as unsaved like typing
+    // does and the preview follows.
+    const setOgImage = (url) => {
+        ogImageUrlInput.value = url;
+        ogImageUrlInput.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    const setOgPickerOpen = (open) => {
+        ogImagePicker.hidden = !open;
+        ogChangeBtn.textContent = open ? 'Close' : 'Change photo';
     };
 
     async function loadOgImageOptions() {
@@ -3224,7 +3243,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ogImagePicker.innerHTML = data.map((img) => `
             <button type="button" class="admin-og-option" data-url="${escapeHtml(img.public_url)}"
                     title="${escapeHtml(img.alt_text || 'Gallery photo')}">
-                <img src="${escapeHtml(img.public_url)}" alt="${escapeHtml(img.alt_text || '')}">
+                <img src="${escapeHtml(img.public_url)}" alt="${escapeHtml(img.alt_text || '')}" loading="lazy">
             </button>`).join('');
         markSelectedOgImage();
     }
@@ -3233,12 +3252,12 @@ document.addEventListener('DOMContentLoaded', () => {
         ogImagePicker.addEventListener('click', (e) => {
             const option = e.target.closest('.admin-og-option');
             if (!option) return;
-            // Clicking the chosen one again clears it, so the site can fall
-            // back to its default share image.
-            const isSelected = option.classList.contains('selected');
-            ogImageUrlInput.value = isSelected ? '' : option.dataset.url;
-            markSelectedOgImage();
+            setOgImage(option.dataset.url);
+            setOgPickerOpen(false);
         });
+        ogChangeBtn.addEventListener('click', () => setOgPickerOpen(ogImagePicker.hidden));
+        // Empty falls back to the site's default share image.
+        ogRemoveBtn.addEventListener('click', () => setOgImage(''));
     }
 
     if (ogImageUrlInput) {
@@ -3248,6 +3267,9 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadSeoSettings() {
         hideError('seoError');
         loadOgImageOptions();
+        // showDashboard() runs again on token refreshes; don't overwrite work
+        // in progress with what's saved.
+        if (dirtyForms.has(seoForm)) return;
 
         const { data, error } = await sbClient.from('site_settings').select('*').eq('id', 1).single();
         if (error) {

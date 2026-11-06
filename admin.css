@@ -1980,3 +1980,28 @@
         transition: none;
     }
 }
+
+/* SEO: the share image in use, with the gallery behind Change photo */
+.admin-og-current {
+    margin-bottom: 0.75rem;
+}
+
+.admin-og-preview {
+    display: block;
+    width: min(320px, 100%);
+    aspect-ratio: 1.91;
+    margin-bottom: 0.6rem;
+    object-fit: cover;
+    border-radius: var(--radius-sm);
+}
+
+.admin-og-preview[hidden],
+.admin-og-picker[hidden] {
+    display: none;
+}
+
+.admin-og-current-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
