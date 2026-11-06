@@ -328,6 +328,33 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') setMenuOpen(false);
     });
 
+    // Desktop only: admin.css ignores .collapsed once the sidebar has become
+    // the More panel. Remembered per browser, like any layout preference.
+    const COLLAPSED_KEY = 'adminSidebarCollapsed';
+    const sidebarCollapseBtn = document.getElementById('sidebarCollapseBtn');
+
+    const setSidebarCollapsed = (collapsed) => {
+        adminSidebar.classList.toggle('collapsed', collapsed);
+        sidebarCollapseBtn.setAttribute('aria-expanded', !collapsed);
+        sidebarCollapseBtn.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+    };
+
+    sidebarCollapseBtn.addEventListener('click', () => {
+        const collapsed = !adminSidebar.classList.contains('collapsed');
+        setSidebarCollapsed(collapsed);
+        try {
+            localStorage.setItem(COLLAPSED_KEY, collapsed ? '1' : '');
+        } catch {
+            // Storage can be blocked; it just won't be remembered.
+        }
+    });
+
+    try {
+        setSidebarCollapsed(localStorage.getItem(COLLAPSED_KEY) === '1');
+    } catch {
+        // Same as above: stay expanded.
+    }
+
     // The bottom bar's badges repeat the sidebar's.
     const syncBottomBadges = () => {
         [['bookingsTabBadge', 'bottomBookingsBadge'], ['enquiriesTabBadge', 'bottomEnquiriesBadge']].forEach(([from, to]) => {

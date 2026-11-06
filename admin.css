@@ -1830,3 +1830,153 @@
         background: var(--bg-light);
     }
 }
+
+/* Sidebar: line icons, the divider between the groups, and the collapsed rail */
+.admin-tab,
+.admin-sidebar-view,
+.admin-sidebar-logout,
+.admin-sidebar-collapse {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.admin-tab {
+    justify-content: flex-start;
+}
+
+.admin-tab .admin-tab-badge {
+    margin-left: auto;
+}
+
+.admin-nav-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+}
+
+.admin-sidebar-view,
+.admin-sidebar-logout {
+    justify-content: center;
+}
+
+.admin-sidebar-view .admin-nav-icon,
+.admin-sidebar-logout .admin-nav-icon {
+    width: 18px;
+    height: 18px;
+}
+
+.admin-sidebar-mark {
+    display: none;
+}
+
+.admin-sidebar-collapse {
+    display: none;
+}
+
+@media (min-width: 901px) {
+    .admin-sidebar {
+        transition: width 0.2s ease;
+    }
+
+    .admin-sidebar-nav {
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .admin-nav-group:not(:first-child) {
+        margin-top: 0.6rem;
+        padding-top: 0.85rem;
+        border-top: 1px solid var(--glass-border);
+    }
+
+    .admin-sidebar-collapse {
+        display: flex;
+        margin-top: 0.75rem;
+        padding: 0.65rem 1rem;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: transparent;
+        color: var(--text-light);
+        font: inherit;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .admin-sidebar-collapse:hover {
+        background: var(--bg-light);
+    }
+
+    .admin-sidebar-collapse[aria-expanded="false"] .admin-nav-icon {
+        transform: rotate(180deg);
+    }
+
+    .admin-sidebar.collapsed {
+        width: 76px;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .admin-sidebar.collapsed .admin-sidebar-brand {
+        align-items: center;
+        padding: 0;
+    }
+
+    .admin-sidebar.collapsed .admin-sidebar-brand img:first-child,
+    .admin-sidebar.collapsed .admin-sidebar-brand span {
+        display: none;
+    }
+
+    .admin-sidebar.collapsed .admin-sidebar-mark {
+        display: block;
+        width: 32px;
+        height: 32px;
+    }
+
+    /* Hidden from sight only, so screen readers still get the names */
+    .admin-sidebar.collapsed .admin-tab-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+
+    .admin-sidebar.collapsed .admin-nav-group {
+        padding: 0;
+        font-size: 0;
+    }
+
+    .admin-sidebar.collapsed .admin-nav-group:first-child {
+        display: none;
+    }
+
+    .admin-sidebar.collapsed .admin-nav-group:not(:first-child) {
+        margin: 0.5rem 0;
+    }
+
+    .admin-sidebar.collapsed .admin-tab,
+    .admin-sidebar.collapsed .admin-sidebar-collapse,
+    .admin-sidebar.collapsed .admin-sidebar-view,
+    .admin-sidebar.collapsed .admin-sidebar-logout {
+        justify-content: center;
+        padding: 0.65rem 0;
+    }
+
+    .admin-sidebar.collapsed .admin-tab {
+        position: relative;
+    }
+
+    .admin-sidebar.collapsed .admin-tab .admin-tab-badge {
+        position: absolute;
+        top: 0.1rem;
+        right: 0.1rem;
+        margin: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .admin-sidebar {
+        transition: none;
+    }
+}

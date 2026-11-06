@@ -43,26 +43,28 @@
         <aside class="admin-sidebar">
             <div class="admin-sidebar-brand">
                 <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo">
+                <img class="admin-sidebar-mark" src="images/favicon-32.png" alt="">
                 <span>Staff Admin</span>
             </div>
             <div id="adminMenuScrim" class="admin-menu-scrim"></div>
             <div id="adminSidebarMenu" class="admin-sidebar-menu">
             <nav class="admin-sidebar-nav">
                 <span class="admin-nav-group">Daily</span>
-                <button class="admin-tab active" data-tab="home">Home</button>
-                <button class="admin-tab" data-tab="bookings">Bookings<span id="bookingsTabBadge" class="admin-tab-badge" hidden></span></button>
-                <button class="admin-tab" data-tab="enquiries">Enquiries<span id="enquiriesTabBadge" class="admin-tab-badge" hidden></span></button>
-                <button class="admin-tab" data-tab="guests">Guests</button>
+                <button class="admin-tab active" data-tab="home" title="Home"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg><span class="admin-tab-label">Home</span></button>
+                <button class="admin-tab" data-tab="bookings" title="Bookings"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span class="admin-tab-label">Bookings</span><span id="bookingsTabBadge" class="admin-tab-badge" hidden></span></button>
+                <button class="admin-tab" data-tab="enquiries" title="Enquiries"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H8l-5 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span class="admin-tab-label">Enquiries</span><span id="enquiriesTabBadge" class="admin-tab-badge" hidden></span></button>
+                <button class="admin-tab" data-tab="guests" title="Guests"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M16 4.5a4 4 0 0 1 0 7"/><path d="M18 14.5c2.4.8 4 3.1 4 5.5"/></svg><span class="admin-tab-label">Guests</span></button>
                 <span class="admin-nav-group">Website</span>
-                <button class="admin-tab" data-tab="reviews">Reviews</button>
-                <button class="admin-tab" data-tab="faqs">FAQs</button>
-                <button class="admin-tab" data-tab="activities">Activities</button>
-                <button class="admin-tab" data-tab="gallery">Gallery</button>
-                <button class="admin-tab" data-tab="contact">Contact</button>
-                <button class="admin-tab" data-tab="seo">SEO</button>
+                <button class="admin-tab" data-tab="reviews" title="Reviews"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.8 5.7 6.2.900-4.5 4.4 1.1 6.200L12 17.3 6.4 20.200l1.1-6.200L3 9.600l6.2-.900z"/></svg><span class="admin-tab-label">Reviews</span></button>
+                <button class="admin-tab" data-tab="faqs" title="FAQs"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.500a2.5 2.5 0 1 1 3.7 2.200c-.800.4-1.2 1-1.2 1.8"/><path d="M12 17h.01"/></svg><span class="admin-tab-label">FAQs</span></button>
+                <button class="admin-tab" data-tab="activities" title="Activities"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.500l-2 5-5 2 2-5z"/></svg><span class="admin-tab-label">Activities</span></button>
+                <button class="admin-tab" data-tab="gallery" title="Gallery"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg><span class="admin-tab-label">Gallery</span></button>
+                <button class="admin-tab" data-tab="contact" title="Contact"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 16.500v3a2 2 0 0 1-2.2 2A18 18 0 0 1 2.5 5.2 2 2 0 0 1 4.5 3h3a2 2 0 0 1 2 1.700c.100.9.300 1.8.600 2.600a2 2 0 0 1-.400 2.100L8.4 10.700a15 15 0 0 0 4.9 4.900l1.3-1.300a2 2 0 0 1 2.1-.400c.800.3 1.7.500 2.6.600a2 2 0 0 1 1.7 2z"/></svg><span class="admin-tab-label">Contact</span></button>
+                <button class="admin-tab" data-tab="seo" title="SEO"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.8-3.8"/></svg><span class="admin-tab-label">SEO</span></button>
             </nav>
-            <a href="/" target="_blank" rel="noopener" class="admin-btn-secondary admin-sidebar-view">View site</a>
-            <button id="logoutBtn" class="admin-btn-secondary admin-sidebar-logout">Log Out</button>
+            <button type="button" id="sidebarCollapseBtn" class="admin-sidebar-collapse" aria-expanded="true" title="Collapse sidebar"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg><span class="admin-tab-label">Collapse</span></button>
+            <a href="/" target="_blank" rel="noopener" class="admin-btn-secondary admin-sidebar-view" title="View site"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg><span class="admin-tab-label">View site</span></a>
+            <button id="logoutBtn" class="admin-btn-secondary admin-sidebar-logout" title="Log out"><svg class="admin-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span class="admin-tab-label">Log Out</span></button>
             </div>
         </aside>
 
