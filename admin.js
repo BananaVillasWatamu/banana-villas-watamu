@@ -635,9 +635,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const term = bookingSearch.value.trim().toLowerCase();
-        const rows = bookingsCache.filter((b) => matchesBookingFilter(b, bookingFilter.value) && matchesBookingSearch(b, term));
-        // Most recent stay first once you are looking backwards.
-        if (bookingFilter.value === 'past') rows.reverse();
+        // bookingsCache runs oldest check-in first, which the calendar and Home rely on.
+        const rows = bookingsCache
+            .filter((b) => matchesBookingFilter(b, bookingFilter.value) && matchesBookingSearch(b, term))
+            .reverse();
 
         bookingCount.textContent = `${rows.length} of ${bookingsCache.length}`;
 
