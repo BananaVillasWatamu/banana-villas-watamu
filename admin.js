@@ -134,11 +134,13 @@ document.addEventListener('DOMContentLoaded', () => {
         loadSeoSettings();
         loadIcalSettings();
         loadDroneVideo();
+        startAutoRefresh();
     };
 
     const showLogin = () => {
         dashboardView.style.display = 'none';
         loginView.style.display = 'flex';
+        stopAutoRefresh();
     };
 
     sbClient.auth.getSession().then(({ data }) => {
@@ -188,6 +190,33 @@ document.addEventListener('DOMContentLoaded', () => {
             tabBtn.classList.add('active');
             document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active');
         });
+    });
+
+    // ---------- Auto refresh ----------
+    //
+    // Requests arrive from the public site while this page sits open. Nothing
+    // else would show them until a reload, and they expire. showDashboard()
+    // runs again on every token refresh, so the timer must only start once.
+    const REFRESH_MS = 60 * 1000;
+    let refreshTimer = null;
+
+    const backgroundRefresh = () => {
+        if (document.hidden) return;
+        loadBookings({ quiet: true });
+        loadEnquiries({ quiet: true });
+    };
+
+    const startAutoRefresh = () => {
+        if (!refreshTimer) refreshTimer = setInterval(backgroundRefresh, REFRESH_MS);
+    };
+
+    const stopAutoRefresh = () => {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (refreshTimer) backgroundRefresh();
     });
 
     // ---------- Photo compression ----------
@@ -275,24 +304,57 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     let bookingsCache = [];
+    let latestBookingsLoad = 0;
 
-    async function loadBookings() {
-        hideError('bookingsError');
-        if (bookingsCache.length === 0) {
+    // Website requests still waiting for an answer. An expired hold has already
+    // released its dates, so it no longer needs one.
+    const pendingRequests = () => bookingsCache
+        .filter((b) => b.source === 'direct' && b.status === 'pending' && isActiveBooking(b))
+        .sort((a, b) => String(a.hold_expires_at || '').localeCompare(String(b.hold_expires_at || '')));
+
+    // Same buttons on the bookings table, the date details and the Home card.
+    // iCal rows and date blocks carry no guest details.
+    const bookingContactLinks = (b) => {
+        if (b.source !== 'direct') return '';
+        const wa = waHref(b);
+        const dial = String(b.phone || '').replace(/[^\d+]/g, '');
+        const links = [
+            wa ? `<a class="admin-btn-edit" href="${wa}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : '',
+            dial ? `<a class="admin-btn-edit" href="tel:${dial}">Call</a>` : '',
+            b.email ? `<a class="admin-btn-edit" href="mailto:${escapeHtml(b.email)}">Email</a>` : '',
+        ].join('');
+        return links ? `<div class="admin-row-actions admin-contact-links">${links}</div>` : '';
+    };
+
+    // quiet is the auto refresh: nobody asked for it, so it leaves any message
+    // on screen alone and stays silent if one attempt fails.
+    async function loadBookings({ quiet = false } = {}) {
+        if (!quiet) hideError('bookingsError');
+        if (!quiet && bookingsCache.length === 0) {
             showTableSkeleton(bookingsTableBody, 9);
             showTableSkeleton(document.getElementById('homeActiveBookingsBody'), 5, 3);
         }
+        const loadId = ++latestBookingsLoad;
         const { data, error } = await sbClient
             .from('bookings')
             .select('*')
             .order('checkin', { ascending: true });
 
+        // An older load finishing late would undo what a newer one just showed.
+        if (loadId !== latestBookingsLoad) return;
+
         if (error) {
-            showError('bookingsError', 'Failed to load bookings.');
+            if (!quiet) showError('bookingsError', 'Failed to load bookings.');
             return;
         }
 
+        const knownRequests = new Set(pendingRequests().map((b) => b.id));
         bookingsCache = data || [];
+        if (quiet) {
+            const newRequests = pendingRequests().filter((b) => !knownRequests.has(b.id));
+            if (newRequests.length === 1) showToast(`New booking request from ${newRequests[0].guest_name || 'a guest'}.`);
+            else if (newRequests.length > 1) showToast(`${newRequests.length} new booking requests.`);
+        }
         renderCalendar();
         renderHome();
         loadGuests();
@@ -340,7 +402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${b.checkin}</td>
                     <td>${b.checkout}</td>
                     <td>${guest}</td>
-                    <td>${contact}</td>
+                    <td>${contact}${bookingContactLinks(b)}</td>
                     <td>${guests}</td>
                     <td><span class="admin-status-pill admin-status-${displayStatus}">${displayStatus}</span></td>
                     <td>${escapeHtml(b.source)}</td>
@@ -363,6 +425,18 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBookings();
     }
 
+    // Reports failure with a toast: this also runs from the Home card, where
+    // the Bookings banner is out of sight, and loadBookings() clears that banner.
+    async function setBookingStatus(id, status) {
+        const { error } = await sbClient
+            .from('bookings')
+            .update({ status, updated_at: new Date().toISOString() })
+            .eq('id', id);
+        if (error) showToast('Failed to update booking.', 'error');
+        loadBookings();
+        return !error;
+    }
+
     bookingsTableBody.addEventListener('click', async (e) => {
         const btn = e.target.closest('button[data-action]');
         if (!btn) return;
@@ -375,13 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         btn.disabled = true;
-        const newStatus = btn.dataset.action === 'confirm' ? 'confirmed' : 'declined';
-        const { error } = await sbClient
-            .from('bookings')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
-            .eq('id', id);
-        if (error) showError('bookingsError', 'Failed to update booking.');
-        loadBookings();
+        await setBookingStatus(id, btn.dataset.action === 'confirm' ? 'confirmed' : 'declined');
     });
 
     // A row "blocks" a date range if it's confirmed (this also covers manual
@@ -591,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="admin-stat-hint">confirmed bookings only</span>
                 </div>`;
 
-        const pending = bookingsCache.filter((b) => b.status === 'pending' && b.source === 'direct').length;
+        const pending = pendingRequests().length;
         const periodLabel = statsRange === 'all' ? 'all time'
             : statsRange === 'year' ? `${new Date().getFullYear()} so far`
             : 'the last 90 days';
@@ -608,8 +676,55 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    function renderPendingRequests() {
+        const requests = pendingRequests();
+
+        const badge = document.getElementById('bookingsTabBadge');
+        badge.textContent = requests.length;
+        badge.hidden = requests.length === 0;
+
+        document.getElementById('homeNeedsAction').hidden = requests.length === 0;
+        document.getElementById('homeNeedsActionList').innerHTML = requests.map((b) => {
+            const nights = nightsBetweenDates(b.checkin, b.checkout);
+            const guests = (b.adults || b.kids) ? ` · ${b.adults || 0}A / ${b.kids || 0}K` : '';
+            return `
+                <li class="admin-request">
+                    <div class="admin-request-info">
+                        <strong>${homeGuestLabel(b)}</strong>
+                        <span>${formatDateShort(b.checkin)} → ${formatDateShort(b.checkout)} · ${nights} night${nights === 1 ? '' : 's'}${guests}</span>
+                        ${b.notes ? `<span class="admin-request-note">${escapeHtml(b.notes)}</span>` : ''}
+                    </div>
+                    <span class="admin-request-time">${formatHoldCountdown(b.hold_expires_at)}</span>
+                    <div class="admin-request-actions">
+                        ${bookingContactLinks(b)}
+                        <div class="admin-row-actions">
+                            <button class="admin-btn-confirm" data-action="confirm" data-id="${b.id}">Confirm</button>
+                            <button class="admin-btn-decline" data-action="decline" data-id="${b.id}">Decline</button>
+                        </div>
+                    </div>
+                </li>`;
+        }).join('');
+    }
+
+    // Asks before declining, unlike the bookings table: this card is the first
+    // thing on the page, and a declined request can't be brought back from here.
+    document.getElementById('homeNeedsActionList').addEventListener('click', async (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        const booking = bookingsCache.find((b) => b.id === btn.dataset.id);
+        if (!booking) return;
+
+        const confirming = btn.dataset.action === 'confirm';
+        if (!confirming && !confirm(`Decline the request from ${booking.guest_name || 'this guest'}? Their dates become available again.`)) return;
+
+        btn.disabled = true;
+        const saved = await setBookingStatus(booking.id, confirming ? 'confirmed' : 'declined');
+        if (saved) showToast(confirming ? 'Booking confirmed.' : 'Request declined.');
+    });
+
     function renderHome() {
         renderChannelStats();
+        renderPendingRequests();
 
         const todayStr = new Date().toISOString().slice(0, 10);
         const todayDate = new Date(`${todayStr}T00:00:00`);
@@ -743,7 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const range = `${b.checkin} → ${b.checkout}`;
-        const contact = [b.phone, b.email].filter(Boolean).map(escapeHtml).join('<br>') || '—';
+        const contact = ([b.phone, b.email].filter(Boolean).map(escapeHtml).join('<br>') || '—') + bookingContactLinks(b);
         const guests = (b.adults || b.kids) ? `${b.adults || 0}A / ${b.kids || 0}K` : '—';
 
         if (b.source === 'blocked') {
@@ -816,13 +931,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         btn.disabled = true;
-        const newStatus = btn.dataset.action === 'confirm-detail' ? 'confirmed' : 'declined';
-        const { error } = await sbClient
-            .from('bookings')
-            .update({ status: newStatus, updated_at: new Date().toISOString() })
-            .eq('id', booking.id);
-        if (error) showError('bookingsError', 'Failed to update booking.');
-        loadBookings();
+        await setBookingStatus(booking.id, btn.dataset.action === 'confirm-detail' ? 'confirmed' : 'declined');
     });
 
     // Clicking an available day drives the block-dates range selection
@@ -1049,9 +1158,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    async function loadEnquiries() {
-        hideError('enquiriesError');
-        if (enquiriesCache.length === 0) showTableSkeleton(enquiriesTableBody, 9);
+    async function loadEnquiries({ quiet = false } = {}) {
+        if (!quiet) hideError('enquiriesError');
+        if (!quiet && enquiriesCache.length === 0) showTableSkeleton(enquiriesTableBody, 9);
         const { data, error } = await sbClient
             .from('enquiries')
             .select('*')
@@ -1059,7 +1168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .limit(300);
 
         if (error) {
-            showError('enquiriesError', 'Failed to load enquiries.');
+            if (!quiet) showError('enquiriesError', 'Failed to load enquiries.');
             return;
         }
 

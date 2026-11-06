@@ -1485,3 +1485,89 @@
         flex-wrap: wrap;
     }
 }
+
+/* Home: requests waiting for an answer */
+.admin-needs-action {
+    border-left: 4px solid var(--secondary-color);
+}
+
+.admin-needs-action[hidden] {
+    display: none;
+}
+
+.admin-request-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.admin-request {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.5rem 1rem;
+    align-items: start;
+    background: var(--bg-light);
+    border-radius: var(--radius-sm);
+    padding: 0.85rem 1rem;
+}
+
+.admin-request-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+    font-size: 0.9rem;
+    color: var(--text-dark);
+}
+
+.admin-request-note {
+    color: var(--text-light);
+    overflow-wrap: anywhere;
+}
+
+.admin-request-time {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    white-space: nowrap;
+}
+
+.admin-request-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+}
+
+.admin-request-actions .admin-contact-links {
+    margin-top: 0;
+}
+
+.admin-contact-links {
+    flex-wrap: wrap;
+    margin-top: 0.4rem;
+}
+
+/* Bookings tab: the list, then the rarely needed calendar links */
+.admin-list-heading {
+    margin: 1.5rem 0 0.75rem;
+}
+
+.admin-table-wrap + .admin-fold {
+    margin-top: 1.5rem;
+}
+
+.admin-fold > summary {
+    cursor: pointer;
+}
+
+.admin-fold > summary h3 {
+    display: inline;
+    margin: 0;
+}
+
+.admin-fold[open] > summary {
+    margin-bottom: 0.75rem;
+}

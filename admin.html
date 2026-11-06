@@ -47,7 +47,7 @@
             </div>
             <nav class="admin-sidebar-nav">
                 <button class="admin-tab active" data-tab="home">Home</button>
-                <button class="admin-tab" data-tab="bookings">Bookings</button>
+                <button class="admin-tab" data-tab="bookings">Bookings<span id="bookingsTabBadge" class="admin-tab-badge" hidden></span></button>
                 <button class="admin-tab" data-tab="enquiries">Enquiries<span id="enquiriesTabBadge" class="admin-tab-badge" hidden></span></button>
                 <button class="admin-tab" data-tab="guests">Guests</button>
                 <button class="admin-tab" data-tab="reviews">Reviews</button>
@@ -67,6 +67,12 @@
                 <div class="admin-panel-header">
                     <h2>Home</h2>
                     <span id="homeTodayLabel" class="admin-sync-status"></span>
+                </div>
+
+                <div id="homeNeedsAction" class="admin-card admin-needs-action" hidden>
+                    <h3>Needs action</h3>
+                    <p class="admin-hint">Booking requests from the website. Their dates stay held until the time runs out, then free up again.</p>
+                    <ul id="homeNeedsActionList" class="admin-request-list"></ul>
                 </div>
 
                 <div class="admin-card">
@@ -256,9 +262,33 @@
                     </form>
                 </div>
 
+                <h3 class="admin-list-heading">All bookings</h3>
+                <div class="admin-table-wrap">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Check-in</th>
+                                <th>Check-out</th>
+                                <th>Guest</th>
+                                <th>Contact</th>
+                                <th>Guests</th>
+                                <th>Status</th>
+                                <th>Source</th>
+                                <th>Hold expires</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingsTableBody">
+                            <tr>
+                                <td colspan="9" class="admin-table-empty">Loading…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
                 <!-- iCal export (share your calendar out to Airbnb/Booking.com) -->
-                <div class="admin-card">
-                    <h3>Share your calendar</h3>
+                <details class="admin-card admin-fold">
+                    <summary><h3>Share your calendar</h3></summary>
                     <p class="admin-hint">The other half of the sync: paste the matching link below into that
                         platform's "import calendar" settings so it blocks the dates booked here. Each platform gets
                         its own link that leaves out that platform's own reservations — sending Airbnb's bookings back
@@ -285,11 +315,11 @@
                         </div>
                         <button type="button" class="admin-btn-secondary admin-copy-ical" data-target="icalExportAll">Copy link</button>
                     </div>
-                </div>
+                </details>
 
                 <!-- iCal sync settings -->
-                <div class="admin-card">
-                    <h3>Calendar sync (iCal)</h3>
+                <details class="admin-card admin-fold">
+                    <summary><h3>Calendar sync (iCal)</h3></summary>
                     <p class="admin-hint">Paste your Airbnb host calendar export link and your Booking.com extranet
                         export link here. We check them automatically once a day, or trigger it manually below.</p>
                     <form id="icalSettingsForm" class="admin-form">
@@ -307,30 +337,7 @@
                         </div>
                         <p id="syncStatus" class="admin-sync-status"></p>
                     </form>
-                </div>
-
-                <div class="admin-table-wrap">
-                    <table class="admin-table">
-                        <thead>
-                            <tr>
-                                <th>Check-in</th>
-                                <th>Check-out</th>
-                                <th>Guest</th>
-                                <th>Contact</th>
-                                <th>Guests</th>
-                                <th>Status</th>
-                                <th>Source</th>
-                                <th>Hold expires</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="bookingsTableBody">
-                            <tr>
-                                <td colspan="9" class="admin-table-empty">Loading…</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                </details>
             </section>
 
             <!-- Enquiries -->
