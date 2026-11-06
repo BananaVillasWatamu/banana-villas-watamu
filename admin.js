@@ -2657,6 +2657,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const droneVideoForm = document.getElementById('droneVideoForm');
     const droneVideoUrl = document.getElementById('droneVideoUrl');
+    const droneVideoVisible = document.getElementById('droneVideoVisible');
     const droneVideoStatus = document.getElementById('droneVideoStatus');
 
     // Same rules as youtubeVideoId() in api/_lib/youtube.js, which is what the
@@ -2670,11 +2671,12 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadDroneVideo() {
         const { data, error } = await sbClient
             .from('site_settings')
-            .select('drone_video_url')
+            .select('*')
             .eq('id', 1)
             .single();
         if (error) return;
         droneVideoUrl.value = data.drone_video_url || '';
+        droneVideoVisible.checked = data.drone_video_visible !== false;
     }
 
     droneVideoForm.addEventListener('submit', async (e) => {
@@ -2691,18 +2693,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const done = buttonBusy(droneVideoForm.querySelector('button[type="submit"]'));
         const { error } = await sbClient
             .from('site_settings')
-            .update({ drone_video_url: url || null, updated_at: new Date().toISOString() })
+            .update({
+                drone_video_url: url || null,
+                drone_video_visible: droneVideoVisible.checked,
+                updated_at: new Date().toISOString(),
+            })
             .eq('id', 1);
 
         if (error) {
             showError('galleryError', 'Failed to save the drone video.');
+            droneVideoStatus.textContent = 'Not saved. Please try again.';
             done();
             return;
         }
         done('Saved');
-        droneVideoStatus.textContent = url
+        droneVideoStatus.textContent = url && droneVideoVisible.checked
             ? 'Saved. The video shows on the homepage within about 5 minutes.'
-            : 'Removed. The video section is hidden from the homepage within about 5 minutes.';
+            : 'Saved. The video section is hidden from the homepage within about 5 minutes.';
     });
 
     // ---------- SEO ----------

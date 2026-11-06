@@ -782,12 +782,16 @@
                 <div class="admin-card">
                     <h3>Drone video</h3>
                     <p class="admin-hint">Paste the YouTube link for the drone video and it appears on the homepage
-                        in a "See It From Above" section after the gallery. Leave it blank to hide the section.
-                        Changes apply within about 5 minutes.</p>
+                        in a "See It From Above" section after the gallery. Untick "Show on the homepage" to hide the
+                        section and keep the link for later. Changes apply within about 5 minutes.</p>
                     <form id="droneVideoForm" class="admin-form">
                         <div class="form-group">
                             <label for="droneVideoUrl">YouTube link</label>
                             <input type="url" id="droneVideoUrl" placeholder="https://youtu.be/...">
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" id="droneVideoVisible" checked>
+                            <label for="droneVideoVisible">Show on the homepage</label>
                         </div>
                         <div class="form-actions admin-form-actions">
                             <button type="submit" class="btn-primary">Save video</button>

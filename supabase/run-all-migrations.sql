@@ -239,4 +239,5 @@ where not exists (select 1 from contact_methods);
 -- ===========================================================
 
 alter table site_settings
-  add column if not exists drone_video_url text;
+  add column if not exists drone_video_url text,
+  add column if not exists drone_video_visible boolean not null default true;

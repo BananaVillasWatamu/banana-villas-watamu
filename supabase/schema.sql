@@ -459,8 +459,9 @@ create table if not exists site_settings (
   number_of_rooms int default 3,
   price_range text,
   -- YouTube link for the homepage drone video; the section is hidden while
-  -- this is empty. Edited from the Gallery tab.
+  -- this is empty or drone_video_visible is off. Edited from the Gallery tab.
   drone_video_url text,
+  drone_video_visible boolean not null default true,
   updated_at timestamptz not null default now()
 );
 
