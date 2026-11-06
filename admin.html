@@ -45,11 +45,19 @@
                 <img src="images/banana-villas-watamu-logo.png" alt="Banana Villas Logo">
                 <span>Staff Admin</span>
             </div>
+            <button type="button" id="adminMenuBtn" class="admin-menu-btn" aria-expanded="false" aria-controls="adminSidebarMenu">
+                <span aria-hidden="true">&#9776;</span>
+                <span id="adminMenuLabel">Home</span>
+                <span id="adminMenuBadge" class="admin-tab-badge" hidden></span>
+            </button>
+            <div id="adminSidebarMenu" class="admin-sidebar-menu">
             <nav class="admin-sidebar-nav">
+                <span class="admin-nav-group">Daily</span>
                 <button class="admin-tab active" data-tab="home">Home</button>
                 <button class="admin-tab" data-tab="bookings">Bookings<span id="bookingsTabBadge" class="admin-tab-badge" hidden></span></button>
                 <button class="admin-tab" data-tab="enquiries">Enquiries<span id="enquiriesTabBadge" class="admin-tab-badge" hidden></span></button>
                 <button class="admin-tab" data-tab="guests">Guests</button>
+                <span class="admin-nav-group">Website</span>
                 <button class="admin-tab" data-tab="reviews">Reviews</button>
                 <button class="admin-tab" data-tab="faqs">FAQs</button>
                 <button class="admin-tab" data-tab="activities">Activities</button>
@@ -57,7 +65,9 @@
                 <button class="admin-tab" data-tab="contact">Contact</button>
                 <button class="admin-tab" data-tab="seo">SEO</button>
             </nav>
+            <a href="/" target="_blank" rel="noopener" class="admin-btn-secondary admin-sidebar-view">View site</a>
             <button id="logoutBtn" class="admin-btn-secondary admin-sidebar-logout">Log Out</button>
+            </div>
         </aside>
 
         <main class="admin-main">
@@ -263,6 +273,24 @@
                 </div>
 
                 <h3 class="admin-list-heading">All bookings</h3>
+                <div class="admin-inline-form">
+                    <div class="form-group" style="flex:1;min-width:220px;">
+                        <label for="bookingSearch">Search</label>
+                        <input type="search" id="bookingSearch" placeholder="Name, phone or email">
+                    </div>
+                    <div class="form-group">
+                        <label for="bookingFilter">Show</label>
+                        <select id="bookingFilter">
+                            <option value="all">All</option>
+                            <option value="upcoming">Upcoming</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="blocked">Blocked dates</option>
+                            <option value="past">Past</option>
+                        </select>
+                    </div>
+                    <span id="bookingCount" class="admin-sync-status"></span>
+                </div>
                 <div class="admin-table-wrap">
                     <table class="admin-table">
                         <thead>
@@ -767,25 +795,6 @@
                     </label>
                 </div>
                 <div id="galleryError" class="form-error-banner" style="display:none;"></div>
-                <p class="admin-hint">Tick <strong>Header slider</strong> on up to four photos to choose what rotates
-                    behind the title at the top of the site. <span id="heroSlideCount" class="admin-sync-status"></span></p>
-                <p id="galleryUploadStatus" class="admin-sync-status"></p>
-                <div id="galleryUploadProgress" class="admin-progress" hidden>
-                    <div class="admin-progress-track">
-                        <div class="admin-progress-fill" id="galleryProgressFill"></div>
-                    </div>
-                    <span class="admin-progress-label" id="galleryProgressLabel"></span>
-                </div>
-                <div id="galleryDropzone" class="admin-dropzone" role="button" tabindex="0">
-                    <strong>Drag photos here to upload</strong>
-                    <span>or click to pick them — several at once is fine. JPG, PNG, WebP or GIF, up to 5MB each.</span>
-                </div>
-                <p class="admin-hint">Drag a photo card by its handle to reorder the gallery; the site shows them in
-                    this order.</p>
-                <div id="galleryAdminGrid" class="admin-gallery-grid">
-                    <p class="admin-table-empty">Loading…</p>
-                </div>
-
                 <div class="admin-card">
                     <h3>Drone video</h3>
                     <p class="admin-hint">Paste the YouTube link for the drone video and it appears on the homepage
@@ -806,6 +815,25 @@
                         <p id="droneVideoStatus" class="admin-sync-status"></p>
                     </form>
                 </div>
+                <p class="admin-hint">Tick <strong>Header slider</strong> on up to four photos to choose what rotates
+                    behind the title at the top of the site. <span id="heroSlideCount" class="admin-sync-status"></span></p>
+                <p id="galleryUploadStatus" class="admin-sync-status"></p>
+                <div id="galleryUploadProgress" class="admin-progress" hidden>
+                    <div class="admin-progress-track">
+                        <div class="admin-progress-fill" id="galleryProgressFill"></div>
+                    </div>
+                    <span class="admin-progress-label" id="galleryProgressLabel"></span>
+                </div>
+                <div id="galleryDropzone" class="admin-dropzone" role="button" tabindex="0">
+                    <strong>Drag photos here to upload</strong>
+                    <span>or click to pick them — several at once is fine. JPG, PNG, WebP or GIF, up to 5MB each.</span>
+                </div>
+                <p class="admin-hint">Drag a photo card by its handle to reorder the gallery; the site shows them in
+                    this order.</p>
+                <div id="galleryAdminGrid" class="admin-gallery-grid">
+                    <p class="admin-table-empty">Loading…</p>
+                </div>
+
             </section>
 
             <!-- SEO -->
@@ -1004,6 +1032,19 @@
                 <button type="button" class="admin-dialog-close" data-close-dialog aria-label="Close">&times;</button>
             </header>
             <div class="admin-form" id="guestHistoryBody"></div>
+        </div>
+    </dialog>
+
+    <dialog class="admin-dialog admin-confirm" id="confirmDialog" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+        <div class="admin-dialog-panel">
+            <header class="admin-dialog-header">
+                <h3 id="confirmTitle"></h3>
+            </header>
+            <p id="confirmMessage" class="admin-confirm-message"></p>
+            <div class="admin-confirm-actions">
+                <button type="button" id="confirmKeepBtn" class="admin-btn-secondary" data-close-dialog></button>
+                <button type="button" id="confirmOkBtn"></button>
+            </div>
         </div>
     </dialog>
 

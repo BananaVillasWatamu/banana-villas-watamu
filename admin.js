@@ -15,20 +15,57 @@ document.addEventListener('DOMContentLoaded', () => {
     // Small transient notification, bottom-right. Used for things that
     // finish in the background (uploads) where a banner at the top of a
     // scrolled panel would be missed.
-    const showToast = (message, kind = 'success') => {
+    const showToast = (message, kind = 'success', { action, onAction, duration = 5000 } = {}) => {
         const host = document.getElementById('adminToasts');
         if (!host) return;
         const toast = document.createElement('div');
         toast.className = `admin-toast admin-toast-${kind}`;
         toast.textContent = message;
+        const dismiss = () => {
+            toast.classList.remove('visible');
+            setTimeout(() => toast.remove(), 400);
+        };
+        if (action) {
+            const actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.className = 'admin-toast-action';
+            actionBtn.textContent = action;
+            actionBtn.addEventListener('click', () => {
+                onAction();
+                dismiss();
+            });
+            toast.appendChild(actionBtn);
+        }
         host.appendChild(toast);
         // Next frame, so the entry transition actually runs.
         requestAnimationFrame(() => toast.classList.add('visible'));
-        setTimeout(() => {
-            toast.classList.remove('visible');
-            setTimeout(() => toast.remove(), 400);
-        }, 5000);
+        setTimeout(dismiss, duration);
     };
+
+    // Stands in for the browser's confirm(), and says what is about to happen.
+    // Text goes in with textContent, so guest names can't turn into markup.
+    const confirmDialog = document.getElementById('confirmDialog');
+
+    const askConfirm = ({ title, message, action = 'Delete', keep = 'Keep it', danger = true }) => new Promise((resolve) => {
+        const okBtn = document.getElementById('confirmOkBtn');
+        const keepBtn = document.getElementById('confirmKeepBtn');
+        let answer = false;
+
+        document.getElementById('confirmTitle').textContent = title;
+        document.getElementById('confirmMessage').textContent = message;
+        okBtn.textContent = action;
+        okBtn.className = danger ? 'admin-btn-danger' : 'btn-primary';
+        keepBtn.textContent = keep;
+
+        okBtn.onclick = () => {
+            answer = true;
+            confirmDialog.close();
+        };
+        confirmDialog.addEventListener('close', () => resolve(answer), { once: true });
+        confirmDialog.showModal();
+        // Enter should never be what deletes something.
+        keepBtn.focus();
+    });
 
     // Skeleton loaders. Shown while a panel is fetching for the first time —
     // a refresh after an edit keeps the rows already on screen rather than
@@ -100,13 +137,101 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    document.querySelectorAll('.admin-dialog').forEach((dialog) => {
-        dialog.addEventListener('click', (e) => {
-            // The backdrop is the dialog itself; clicks on the panel bubble
-            // from a child, so this only fires outside it.
-            if (e.target === dialog || e.target.closest('[data-close-dialog]')) dialog.close();
-        });
+    // ---------- Unsaved changes ----------
+    //
+    // Filling a form in from code fires no input event, so this set only ever
+    // holds forms somebody has typed in.
+    const dirtyForms = new Set();
+
+    const askDiscard = () => askConfirm({
+        title: 'Discard your changes?',
+        message: "What you've typed here hasn't been saved.",
+        action: 'Discard',
+        keep: 'Keep editing',
     });
+
+    dashboardView.addEventListener('input', (e) => {
+        if (e.target.form) dirtyForms.add(e.target.form);
+    });
+    dashboardView.addEventListener('reset', (e) => dirtyForms.delete(e.target));
+    // A dialog's form stays dirty until the dialog closes, so a failed save
+    // keeps its warning.
+    dashboardView.addEventListener('submit', (e) => {
+        if (!e.target.closest('dialog')) dirtyForms.delete(e.target);
+    });
+
+    document.querySelectorAll('.admin-dialog').forEach((dialog) => {
+        const form = dialog.querySelector('form');
+
+        // Capture phase, so a dirty form can hold back the Cancel buttons' own
+        // handlers as well. On discard the same click is replayed, clean.
+        dialog.addEventListener('click', async (e) => {
+            const target = e.target;
+            // The backdrop is the dialog itself; clicks on the panel come from
+            // a child, so this only matches outside it.
+            const closes = target === dialog || target.closest('[data-close-dialog]');
+            if (!closes && !target.closest('button[id^="cancel"]')) return;
+
+            if (dirtyForms.has(form)) {
+                e.stopPropagation();
+                if (await askDiscard()) {
+                    dirtyForms.delete(form);
+                    target.click();
+                }
+                return;
+            }
+            if (closes) dialog.close();
+        }, true);
+
+        // Esc.
+        dialog.addEventListener('cancel', async (e) => {
+            if (!dirtyForms.has(form)) return;
+            e.preventDefault();
+            if (await askDiscard()) dialog.close();
+        });
+
+        dialog.addEventListener('close', () => dirtyForms.delete(form));
+    });
+
+    window.addEventListener('beforeunload', (e) => {
+        if (dirtyForms.size === 0 && pendingDeletes.size === 0) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+
+    // ---------- Undo ----------
+    //
+    // The delete waits out the undo window instead of being put back afterwards:
+    // a photo's file can't be restored once storage has removed it. Everything
+    // listing these rows skips ids in pendingDeletes, so a reload during the
+    // wait doesn't bring them back on screen.
+    const UNDO_MS = 8000;
+    const pendingDeletes = new Map();
+
+    const deleteWithUndo = ({ id, label, commit, refresh }) => {
+        const finish = async () => {
+            pendingDeletes.delete(id);
+            await commit();
+            refresh();
+        };
+        const timer = setTimeout(finish, UNDO_MS);
+        pendingDeletes.set(id, { timer, finish });
+        refresh();
+        showToast(`${label} deleted.`, 'success', {
+            action: 'Undo',
+            duration: UNDO_MS,
+            onAction: () => {
+                clearTimeout(timer);
+                pendingDeletes.delete(id);
+                refresh();
+            },
+        });
+    };
+
+    const finishPendingDeletes = () => Promise.all([...pendingDeletes.values()].map(({ timer, finish }) => {
+        clearTimeout(timer);
+        return finish();
+    }));
 
     const hideError = (id) => {
         const el = document.getElementById(id);
@@ -173,6 +298,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     logoutBtn.addEventListener('click', async () => {
+        if (dirtyForms.size > 0 && !(await askDiscard())) return;
+        await finishPendingDeletes();
         await sbClient.auth.signOut();
     });
 
@@ -183,13 +310,73 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---------- Tabs ----------
 
+    const TAB_KEY = 'adminTab';
+
+    const adminSidebar = document.querySelector('.admin-sidebar');
+    const adminMenuBtn = document.getElementById('adminMenuBtn');
+
+    // The sidebar folds into this menu on phones and small tablets.
+    const setMenuOpen = (open) => {
+        adminSidebar.classList.toggle('menu-open', open);
+        adminMenuBtn.setAttribute('aria-expanded', open);
+    };
+
+    adminMenuBtn.addEventListener('click', () => setMenuOpen(!adminSidebar.classList.contains('menu-open')));
+
+    // The menu button stands in for every badge while the tabs are folded away.
+    const updateMenuBadge = () => {
+        const total = [...document.querySelectorAll('.admin-tab .admin-tab-badge')]
+            .reduce((sum, badge) => sum + (badge.hidden ? 0 : Number(badge.textContent)), 0);
+        const menuBadge = document.getElementById('adminMenuBadge');
+        menuBadge.textContent = total;
+        menuBadge.hidden = total === 0;
+    };
+
+    const openTab = (tabBtn) => {
+        document.querySelectorAll('.admin-tab').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.admin-panel').forEach((p) => p.classList.remove('active'));
+        tabBtn.classList.add('active');
+        document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active');
+        document.getElementById('adminMenuLabel').textContent = tabBtn.firstChild.textContent;
+    };
+
     document.querySelectorAll('.admin-tab').forEach((tabBtn) => {
         tabBtn.addEventListener('click', () => {
-            document.querySelectorAll('.admin-tab').forEach((b) => b.classList.remove('active'));
-            document.querySelectorAll('.admin-panel').forEach((p) => p.classList.remove('active'));
-            tabBtn.classList.add('active');
-            document.getElementById(`tab-${tabBtn.dataset.tab}`).classList.add('active');
+            openTab(tabBtn);
+            setMenuOpen(false);
+            window.scrollTo(0, 0);
+            try {
+                sessionStorage.setItem(TAB_KEY, tabBtn.dataset.tab);
+            } catch {
+                // Storage can be blocked; the tab just won't survive a refresh.
+            }
         });
+    });
+
+    // sessionStorage rather than localStorage: a refresh stays put, but a new
+    // visit still opens on Home, where the requests needing an answer are.
+    try {
+        const savedTab = sessionStorage.getItem(TAB_KEY);
+        const savedBtn = [...document.querySelectorAll('.admin-tab')].find((b) => b.dataset.tab === savedTab);
+        if (savedBtn) openTab(savedBtn);
+    } catch {
+        // Same as above: stay on Home.
+    }
+
+    // ---------- Tables on phones ----------
+    //
+    // Under 640px admin.css turns each row into a card, and the header row is
+    // gone by then, so every cell carries its column name. Watching the body
+    // covers all the tables without each render having to do this itself.
+    document.querySelectorAll('.admin-table').forEach((table) => {
+        const headings = [...table.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+        const labelCells = () => table.querySelectorAll('tbody tr').forEach((row) => {
+            [...row.children].forEach((cell, i) => {
+                cell.dataset.label = headings[i] || '';
+            });
+        });
+        new MutationObserver(labelCells).observe(table.tBodies[0], { childList: true });
+        labelCells();
     });
 
     // ---------- Auto refresh ----------
@@ -306,6 +493,21 @@ document.addEventListener('DOMContentLoaded', () => {
     let bookingsCache = [];
     let latestBookingsLoad = 0;
 
+    // "12 Nov 2026". Display only: the data, comparisons and CSV export all
+    // keep the stored YYYY-MM-DD.
+    const formatDate = (dateStr) => (dateStr
+        ? new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '—');
+
+    const nightsLabel = (b) => {
+        const nights = nightsBetweenDates(b.checkin, b.checkout);
+        return `${nights} night${nights === 1 ? '' : 's'}`;
+    };
+
+    const bookingSearch = document.getElementById('bookingSearch');
+    const bookingFilter = document.getElementById('bookingFilter');
+    const bookingCount = document.getElementById('bookingCount');
+
     // Website requests still waiting for an answer. An expired hold has already
     // released its dates, so it no longer needs one.
     const pendingRequests = () => bookingsCache
@@ -359,13 +561,51 @@ document.addEventListener('DOMContentLoaded', () => {
         renderHome();
         loadGuests();
         if (selectedDetailDate) renderDateDetails(selectedDetailDate);
+        renderBookingsTable();
+    }
 
+    const matchesBookingFilter = (b, filter) => {
+        const now = new Date();
+        const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        switch (filter) {
+            case 'upcoming': return isActiveBooking(b) && b.checkout >= today;
+            case 'pending': return b.status === 'pending';
+            case 'confirmed': return b.status === 'confirmed' && b.source !== 'blocked';
+            case 'blocked': return b.source === 'blocked';
+            case 'past': return b.checkout < today;
+            default: return true;
+        }
+    };
+
+    const matchesBookingSearch = (b, term) => {
+        if (!term) return true;
+        const text = [b.guest_name, b.phone, b.whatsapp, b.email, b.notes].join(' ').toLowerCase();
+        if (text.includes(term)) return true;
+        // Phone numbers get typed with and without spaces.
+        const digits = term.replace(/\D/g, '');
+        return digits.length > 0 && text.replace(/\D/g, '').includes(digits);
+    };
+
+    function renderBookingsTable() {
         if (bookingsCache.length === 0) {
+            bookingCount.textContent = '';
             bookingsTableBody.innerHTML = '<tr><td colspan="9" class="admin-table-empty">No bookings yet.</td></tr>';
             return;
         }
 
-        bookingsTableBody.innerHTML = bookingsCache.map((b) => {
+        const term = bookingSearch.value.trim().toLowerCase();
+        const rows = bookingsCache.filter((b) => matchesBookingFilter(b, bookingFilter.value) && matchesBookingSearch(b, term));
+        // Most recent stay first once you are looking backwards.
+        if (bookingFilter.value === 'past') rows.reverse();
+
+        bookingCount.textContent = `${rows.length} of ${bookingsCache.length}`;
+
+        if (rows.length === 0) {
+            bookingsTableBody.innerHTML = '<tr><td colspan="9" class="admin-table-empty">Nothing matches that search.</td></tr>';
+            return;
+        }
+
+        bookingsTableBody.innerHTML = rows.map((b) => {
             const isPending = b.status === 'pending';
             const isBlocked = b.source === 'blocked';
             const displayStatus = isBlocked ? 'blocked' : b.status;
@@ -399,8 +639,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return `
                 <tr>
-                    <td>${b.checkin}</td>
-                    <td>${b.checkout}</td>
+                    <td>${formatDate(b.checkin)}</td>
+                    <td>${formatDate(b.checkout)}<br><span class="admin-cell-sub">${nightsLabel(b)}</span></td>
                     <td>${guest}</td>
                     <td>${contact}${bookingContactLinks(b)}</td>
                     <td>${guests}</td>
@@ -412,18 +652,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
+    bookingSearch.addEventListener('input', renderBookingsTable);
+    bookingFilter.addEventListener('change', renderBookingsTable);
+
     // Shared by the table's "Unblock" button and clicking a blocked day on
     // the calendar. Only ever called for source='blocked' rows — never for
     // Airbnb/Booking.com bookings, which aren't ours to remove locally.
     async function unblockBooking(booking) {
-        const proceed = confirm(
-            `Unblock ${booking.checkin} to ${booking.checkout}${booking.notes ? ` (${booking.notes})` : ''}? These dates will become available again.`
-        );
+        const proceed = await askConfirm({
+            title: 'Unblock these dates?',
+            message: `${formatDate(booking.checkin)} to ${formatDate(booking.checkout)}${booking.notes ? ` (${booking.notes})` : ''} will become available to guests again.`,
+            action: 'Unblock',
+            keep: 'Keep blocked',
+        });
         if (!proceed) return;
         const { error } = await sbClient.from('bookings').delete().eq('id', booking.id);
         if (error) showError('bookingsError', 'Failed to unblock those dates.');
         loadBookings();
     }
+
+    // Confirming needs no second thought; turning a guest away does, and there
+    // is no button to bring them back.
+    const confirmBookingChange = (booking, status) => {
+        if (status === 'confirmed') return Promise.resolve(true);
+        const isRequest = booking.status === 'pending';
+        return askConfirm({
+            title: isRequest ? 'Decline this request?' : 'Cancel this booking?',
+            message: `${booking.guest_name || 'This guest'}, ${formatDate(booking.checkin)} to ${formatDate(booking.checkout)}. Their dates become available again.`,
+            action: isRequest ? 'Decline request' : 'Cancel booking',
+            keep: 'Go back',
+        });
+    };
 
     // Reports failure with a toast: this also runs from the Home card, where
     // the Bookings banner is out of sight, and loadBookings() clears that banner.
@@ -448,8 +707,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const booking = bookingsCache.find((b) => b.id === id);
+        const status = btn.dataset.action === 'confirm' ? 'confirmed' : 'declined';
+        if (!booking || !(await confirmBookingChange(booking, status))) return;
+
         btn.disabled = true;
-        await setBookingStatus(id, btn.dataset.action === 'confirm' ? 'confirmed' : 'declined');
+        await setBookingStatus(id, status);
     });
 
     // A row "blocks" a date range if it's confirmed (this also covers manual
@@ -502,8 +765,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (hasBookingOverlap(checkin, checkout)) {
-            const proceed = confirm('These dates overlap with an existing booking or block. Add this booking anyway?');
-            if (!proceed) return;
+            const proceed = await askConfirm({
+                title: 'These dates are taken',
+                message: 'They overlap with an existing booking or block. Add this booking anyway?',
+                action: 'Add anyway',
+                keep: 'Go back',
+                danger: false,
+            });
+            if (!proceed) {
+                bookingDone();
+                return;
+            }
         }
 
         const { error } = await sbClient.from('bookings').insert({
@@ -566,7 +838,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const formatDateShort = (dateStr) =>
-        new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', month: 'short', day: 'numeric' });
 
     const homeGuestLabel = (b) => escapeHtml(b.guest_name || (b.source !== 'direct' ? `(${b.source})` : 'Guest'));
 
@@ -682,16 +954,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const badge = document.getElementById('bookingsTabBadge');
         badge.textContent = requests.length;
         badge.hidden = requests.length === 0;
+        updateMenuBadge();
 
         document.getElementById('homeNeedsAction').hidden = requests.length === 0;
         document.getElementById('homeNeedsActionList').innerHTML = requests.map((b) => {
-            const nights = nightsBetweenDates(b.checkin, b.checkout);
             const guests = (b.adults || b.kids) ? ` · ${b.adults || 0}A / ${b.kids || 0}K` : '';
             return `
                 <li class="admin-request">
                     <div class="admin-request-info">
                         <strong>${homeGuestLabel(b)}</strong>
-                        <span>${formatDateShort(b.checkin)} → ${formatDateShort(b.checkout)} · ${nights} night${nights === 1 ? '' : 's'}${guests}</span>
+                        <span>${formatDateShort(b.checkin)} → ${formatDateShort(b.checkout)} · ${nightsLabel(b)}${guests}</span>
                         ${b.notes ? `<span class="admin-request-note">${escapeHtml(b.notes)}</span>` : ''}
                     </div>
                     <span class="admin-request-time">${formatHoldCountdown(b.hold_expires_at)}</span>
@@ -706,20 +978,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('');
     }
 
-    // Asks before declining, unlike the bookings table: this card is the first
-    // thing on the page, and a declined request can't be brought back from here.
     document.getElementById('homeNeedsActionList').addEventListener('click', async (e) => {
         const btn = e.target.closest('button[data-action]');
         if (!btn) return;
         const booking = bookingsCache.find((b) => b.id === btn.dataset.id);
         if (!booking) return;
 
-        const confirming = btn.dataset.action === 'confirm';
-        if (!confirming && !confirm(`Decline the request from ${booking.guest_name || 'this guest'}? Their dates become available again.`)) return;
+        const status = btn.dataset.action === 'confirm' ? 'confirmed' : 'declined';
+        if (!(await confirmBookingChange(booking, status))) return;
 
         btn.disabled = true;
-        const saved = await setBookingStatus(booking.id, confirming ? 'confirmed' : 'declined');
-        if (saved) showToast(confirming ? 'Booking confirmed.' : 'Request declined.');
+        const saved = await setBookingStatus(booking.id, status);
+        if (saved) showToast(status === 'confirmed' ? 'Booking confirmed.' : 'Request declined.');
     });
 
     function renderHome() {
@@ -728,7 +998,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const todayStr = new Date().toISOString().slice(0, 10);
         const todayDate = new Date(`${todayStr}T00:00:00`);
-        document.getElementById('homeTodayLabel').textContent = todayDate.toLocaleDateString('en-US', {
+        document.getElementById('homeTodayLabel').textContent = todayDate.toLocaleDateString('en-GB', {
             weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
         });
 
@@ -767,8 +1037,8 @@ document.addEventListener('DOMContentLoaded', () => {
         activeBookingsBody.innerHTML = sortedActive.length
             ? sortedActive.map((b) => `
                 <tr>
-                    <td>${b.checkin}</td>
-                    <td>${b.checkout}</td>
+                    <td>${formatDate(b.checkin)}</td>
+                    <td>${formatDate(b.checkout)}<br><span class="admin-cell-sub">${nightsLabel(b)}</span></td>
                     <td>${homeGuestLabel(b)}</td>
                     <td><span class="admin-status-pill admin-status-${b.status}">${b.status}</span></td>
                     <td>${escapeHtml(b.source)}</td>
@@ -840,7 +1110,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const dateDetailsLabel = (dateStr) =>
-        new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-US', {
+        new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-GB', {
             weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
         });
 
@@ -857,7 +1127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const range = `${b.checkin} → ${b.checkout}`;
+        const range = `${formatDate(b.checkin)} → ${formatDate(b.checkout)} · ${nightsLabel(b)}`;
         const contact = ([b.phone, b.email].filter(Boolean).map(escapeHtml).join('<br>') || '—') + bookingContactLinks(b);
         const guests = (b.adults || b.kids) ? `${b.adults || 0}A / ${b.kids || 0}K` : '—';
 
@@ -930,8 +1200,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const status = btn.dataset.action === 'confirm-detail' ? 'confirmed' : 'declined';
+        if (!(await confirmBookingChange(booking, status))) return;
+
         btn.disabled = true;
-        await setBookingStatus(booking.id, btn.dataset.action === 'confirm-detail' ? 'confirmed' : 'declined');
+        await setBookingStatus(booking.id, status);
     });
 
     // Clicking an available day drives the block-dates range selection
@@ -1107,6 +1380,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (enquiriesTabBadge) {
             enquiriesTabBadge.textContent = openCount;
             enquiriesTabBadge.hidden = openCount === 0;
+            updateMenuBadge();
         }
 
         if (rows.length === 0) {
@@ -1122,8 +1396,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const dates = e.activity
                 ? escapeHtml(e.activity_date || 'date not given')
                 : e.checkin && e.checkout
-                    ? `${e.checkin} → ${e.checkout}`
-                    : escapeHtml(e.checkin || e.checkout || '—');
+                    ? `${formatDate(e.checkin)} → ${formatDate(e.checkout)}`
+                    : formatDate(e.checkin || e.checkout);
             const guests = (e.adults || e.kids) ? `${e.adults || 0}A / ${e.kids || 0}K` : '—';
             const contactBits = [];
             if (e.phone) contactBits.push(escapeHtml(e.phone));
@@ -1189,7 +1463,12 @@ document.addEventListener('DOMContentLoaded', () => {
         hideError('enquiriesError');
 
         if (btn.dataset.action === 'delete-enquiry') {
-            if (!confirm('Delete this enquiry? This only removes the record of the enquiry — any booking made from it stays.')) {
+            const enquiry = enquiriesCache.find((row) => row.id === id);
+            const deleteEnquiry = await askConfirm({
+                title: 'Delete this enquiry?',
+                message: `${enquiry?.guest_name || 'This enquiry'}: this only removes the record of the enquiry. Any booking made from it stays.`,
+            });
+            if (!deleteEnquiry) {
                 btn.disabled = false;
                 return;
             }
@@ -1354,7 +1633,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <td>${g.stays}</td>
                     <td>${g.nights}</td>
                     <td>${g.enquiries}</td>
-                    <td>${g.lastStay || '—'}</td>
+                    <td>${formatDate(g.lastStay)}</td>
                     <td>
                         <div class="admin-row-actions">
                             ${wa ? `<a class="admin-btn-edit" href="${wa}" target="_blank" rel="noopener noreferrer">WhatsApp</a>` : ''}
@@ -1391,11 +1670,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${guest.enquiries} enquir${guest.enquiries === 1 ? 'y' : 'ies'}</p>
                 <ul class="admin-guest-history">
                     ${entries.map((h) => h.kind === 'booking'
-                        ? `<li><strong>Stay</strong> ${h.checkin} → ${h.checkout}
+                        ? `<li><strong>Stay</strong> ${formatDate(h.checkin)} → ${formatDate(h.checkout)}
                              <span class="admin-status-pill admin-status-${h.status}">${h.status}</span>
                              ${h.notes ? `<br><span class="admin-hint">${escapeHtml(h.notes)}</span>` : ''}</li>`
-                        : `<li><strong>Enquiry</strong> ${(h.created_at || '').slice(0, 10)}
-                             ${h.checkin ? `for ${h.checkin} → ${h.checkout}` : ''}
+                        : `<li><strong>Enquiry</strong> ${formatDate((h.created_at || '').slice(0, 10))}
+                             ${h.checkin ? `for ${formatDate(h.checkin)} → ${formatDate(h.checkout)}` : ''}
                              ${h.notes ? `<br><span class="admin-hint">${escapeHtml(h.notes)}</span>` : ''}</li>`
                     ).join('')}
                 </ul>`;
@@ -1485,7 +1764,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function loadReviews() {
         hideError('reviewsError');
         if (!reviewsTableBody.querySelector('tr[data-loaded]')) showTableSkeleton(reviewsTableBody, 7);
-        const { data, error } = await sbClient
+        const { data: allReviews, error } = await sbClient
             .from('reviews')
             .select('*')
             .order('review_date', { ascending: false });
@@ -1495,7 +1774,9 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        if (!data || data.length === 0) {
+        const data = (allReviews || []).filter((r) => !pendingDeletes.has(r.id));
+
+        if (data.length === 0) {
             reviewsTableBody.innerHTML = '<tr><td colspan="7" class="admin-table-empty">No reviews yet.</td></tr>';
             return;
         }
@@ -1527,10 +1808,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = btn.dataset.id;
 
         if (btn.dataset.action === 'delete') {
-            if (!confirm('Delete this review?')) return;
-            const { error } = await sbClient.from('reviews').delete().eq('id', id);
-            if (error) showError('reviewsError', 'Failed to delete review.');
-            loadReviews();
+            deleteWithUndo({
+                id,
+                label: 'Review',
+                refresh: loadReviews,
+                commit: async () => {
+                    const { error } = await sbClient.from('reviews').delete().eq('id', id);
+                    if (error) showToast('Failed to delete review.', 'error');
+                },
+            });
             return;
         }
 
@@ -1626,7 +1912,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        faqsCache = data || [];
+        faqsCache = (data || []).filter((f) => !pendingDeletes.has(f.id));
 
         if (faqsCache.length === 0) {
             faqsTableBody.innerHTML = '<tr><td colspan="5" class="admin-table-empty">No questions yet. Add the first one above.</td></tr>';
@@ -1688,10 +1974,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (action === 'delete') {
-            if (!confirm('Delete this question? It disappears from the site straight away.')) return;
-            const { error } = await sbClient.from('faqs').delete().eq('id', id);
-            if (error) showError('faqsError', 'Failed to delete that question.');
-            loadFaqs();
+            deleteWithUndo({
+                id,
+                label: 'Question',
+                refresh: loadFaqs,
+                commit: async () => {
+                    const { error } = await sbClient.from('faqs').delete().eq('id', id);
+                    if (error) showToast('Failed to delete that question.', 'error');
+                },
+            });
             return;
         }
 
@@ -1860,9 +2151,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // to the site's built-in number if there isn't one. Worth saying
             // out loud rather than discovering on the live site.
             const warning = entry?.is_primary
-                ? `Delete ${entry.value}? It is the primary ${CONTACT_KIND_LABELS[entry.kind] || entry.kind} — the site will fall back to another entry of that type.`
-                : 'Delete this contact detail?';
-            if (!confirm(warning)) return;
+                ? `${entry.value} is the primary ${CONTACT_KIND_LABELS[entry.kind] || entry.kind}. The site will fall back to another entry of that type.`
+                : `${entry?.value || 'This contact detail'} disappears from the site straight away.`;
+            if (!(await askConfirm({ title: 'Delete this contact detail?', message: warning }))) return;
 
             const { error } = await sbClient.from('contact_methods').delete().eq('id', id);
             if (error) showError('contactError', 'Failed to delete that contact detail.');
@@ -2192,7 +2483,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (action === 'delete') {
             const activity = activitiesCache.find((a) => a.id === id);
-            if (!confirm(`Delete "${activity ? activity.title : 'this activity'}"? This removes it from the site straight away.`)) return;
+            const deleteActivity = await askConfirm({
+                title: 'Delete this activity?',
+                message: `"${activity ? activity.title : 'This activity'}" disappears from the site straight away, along with its photo.`,
+            });
+            if (!deleteActivity) return;
             if (activity && activity.image_path) {
                 await sbClient.storage.from(ACTIVITY_BUCKET).remove([activity.image_path]);
             }
@@ -2470,7 +2765,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        galleryCache = data || [];
+        galleryCache = (data || []).filter((img) => !pendingDeletes.has(img.id));
 
         if (galleryCache.length === 0) {
             galleryAdminGrid.innerHTML = '<p class="admin-table-empty">No photos yet — drag some in above.</p>';
@@ -2538,12 +2833,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const id = card.dataset.id;
         const storagePath = btn.dataset.path;
 
-        if (!confirm('Delete this photo?')) return;
-
-        await sbClient.storage.from(GALLERY_BUCKET).remove([storagePath]);
-        const { error } = await sbClient.from('gallery_images').delete().eq('id', id);
-        if (error) showError('galleryError', 'Failed to delete photo.');
-        loadGallery();
+        deleteWithUndo({
+            id,
+            label: 'Photo',
+            refresh: loadGallery,
+            commit: async () => {
+                // The row first: if that fails the photo is simply still there,
+                // rather than listed with its file gone.
+                const { error } = await sbClient.from('gallery_images').delete().eq('id', id);
+                if (error) {
+                    showToast('Failed to delete photo.', 'error');
+                    return;
+                }
+                await sbClient.storage.from(GALLERY_BUCKET).remove([storagePath]);
+            },
+        });
     });
 
     // ---------- Gallery: drag to reorder ----------

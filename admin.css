@@ -113,6 +113,17 @@
     max-width: 100%;
 }
 
+.admin-sidebar-menu {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.admin-menu-btn {
+    display: none;
+}
+
 .admin-sidebar-nav {
     display: flex;
     flex-direction: column;
@@ -1443,11 +1454,38 @@
     .admin-sidebar {
         width: 100%;
         height: auto;
-        position: static;
+        z-index: 100;
         flex-direction: row;
         align-items: center;
         flex-wrap: wrap;
-        padding: 1rem;
+        padding: 0.75rem 1rem;
+        border-right: none;
+        border-bottom: 1px solid var(--glass-border);
+    }
+
+    .admin-menu-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.9rem;
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-sm);
+        background: var(--bg-light);
+        color: var(--text-dark);
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .admin-sidebar-menu {
+        display: none;
+        flex: 0 0 100%;
+        max-height: calc(100vh - 4.5rem);
+        overflow-y: auto;
+        padding-top: 0.75rem;
+    }
+
+    .admin-sidebar.menu-open .admin-sidebar-menu {
+        display: flex;
     }
 
     .admin-sidebar-brand {
@@ -1457,14 +1495,6 @@
         margin-right: auto;
     }
 
-    .admin-sidebar-nav {
-        flex-direction: row;
-        flex: none;
-    }
-
-    .admin-sidebar-logout {
-        margin-top: 0;
-    }
 }
 
 @media (max-width: 640px) {
@@ -1477,13 +1507,6 @@
         padding: 1.25rem;
     }
 
-    .admin-sidebar {
-        padding: 1rem;
-    }
-
-    .admin-sidebar-nav {
-        flex-wrap: wrap;
-    }
 }
 
 /* Home: requests waiting for an answer */
@@ -1570,4 +1593,155 @@
 
 .admin-fold[open] > summary {
     margin-bottom: 0.75rem;
+}
+
+/* Sidebar: labels for the two groups of tabs, and the link out to the site */
+.admin-nav-group {
+    padding: 0.85rem 1rem 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-light);
+}
+
+.admin-nav-group:first-child {
+    padding-top: 0;
+}
+
+.admin-sidebar-view {
+    margin-top: 1rem;
+    font-size: 0.85rem;
+    text-align: center;
+    text-decoration: none;
+}
+
+.admin-sidebar-view + .admin-sidebar-logout {
+    margin-top: 0.5rem;
+}
+
+.admin-cell-sub {
+    font-size: 0.8rem;
+    color: var(--text-light);
+}
+
+/* Styled confirmation */
+.admin-confirm {
+    max-width: min(26rem, calc(100vw - 2rem));
+}
+
+.admin-confirm-message {
+    padding: 1rem 1.5rem 0;
+    color: var(--text-dark);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.admin-confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.6rem;
+    padding: 1.25rem 1.5rem;
+}
+
+.admin-btn-danger {
+    padding: 0.5rem 1.1rem;
+    border: 1px solid #b91c1c;
+    border-radius: var(--radius-pill);
+    background: #b91c1c;
+    color: #fff;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.admin-btn-danger:hover {
+    background: #991b1b;
+}
+
+/* The undo button sits in a container that ignores the pointer */
+.admin-toast-action {
+    margin-left: 0.75rem;
+    padding: 0.15rem 0.6rem;
+    border: 1px solid var(--primary-deep);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--primary-deep);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+/* Phones: every table row becomes a card */
+@media (max-width: 640px) {
+    /* Fills the bottom sheet the dialogs turn into at this width */
+    .admin-confirm {
+        max-width: none;
+    }
+
+    /* Logo and menu button share one row */
+    .admin-sidebar-brand span {
+        display: none;
+    }
+
+    .admin-table-wrap {
+        overflow-x: visible;
+        background: none;
+        border: none;
+    }
+
+    .admin-table thead {
+        display: none;
+    }
+
+    .admin-table,
+    .admin-table tbody,
+    .admin-table tr,
+    .admin-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .admin-table tr {
+        margin-bottom: 0.75rem;
+        padding: 0.4rem 0;
+        background: var(--bg-white);
+        border: 1px solid var(--glass-border);
+        border-radius: var(--radius-sm);
+    }
+
+    .admin-table td,
+    .admin-table tr:last-child td {
+        position: relative;
+        padding: 0.4rem 0.9rem 0.4rem 6.75rem;
+        border-bottom: none;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .admin-table td::before {
+        content: attr(data-label);
+        position: absolute;
+        left: 0.9rem;
+        width: 5.5rem;
+        color: var(--text-light);
+        font-size: 0.72rem;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+    }
+
+    .admin-table td[data-label=""] {
+        padding-left: 0.9rem;
+    }
+
+    .admin-table td.admin-table-empty::before,
+    .admin-table td[data-label=""]::before {
+        content: none;
+    }
+
+    .admin-row-actions {
+        flex-wrap: wrap;
+    }
 }
